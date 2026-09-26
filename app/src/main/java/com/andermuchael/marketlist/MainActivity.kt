@@ -734,11 +734,13 @@ fun MarketlistApp(client: SupabaseClient? = null, vm: MarketViewModel = viewMode
     var categoryMenuOpen by remember { mutableStateOf(false) }
     var showAddSheet by remember { mutableStateOf(false) }
     var showBudget by remember { mutableStateOf(false) }
+    var showMoreMenu by remember { mutableStateOf(false) }
     var budgetText by remember(vm.budget) { mutableStateOf(if (vm.budget == 0.0) "" else vm.budget.toString()) }
     var currentFilter by remember { mutableStateOf("Todos") }
     var selectedNav by remember { mutableIntStateOf(0) }
     val priceDrafts = remember { mutableStateMapOf<Long, String>() }
     var cloudInitialized by remember(client) { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(client) {
         if (client == null) return@LaunchedEffect
@@ -776,7 +778,7 @@ fun MarketlistApp(client: SupabaseClient? = null, vm: MarketViewModel = viewMode
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF102A63))
                 )
             },
-            bottomBar = { NavigationBar(containerColor = Color.White) { NavigationBarItem(selected = selectedNav == 0, onClick = { selectedNav = 0 }, icon = { Icon(Icons.Default.ShoppingCart, null) }, label = { Text("Lista") }); NavigationBarItem(selected = selectedNav == 1, onClick = { selectedNav = 1; vm.showHistory = true }, icon = { Icon(Icons.Default.History, null) }, label = { Text("Histórico") }); NavigationBarItem(selected = selectedNav == 2, onClick = { selectedNav = 2 }, icon = { Icon(Icons.Default.Search, null) }, label = { Text("Código") }); NavigationBarItem(selected = selectedNav == 3, onClick = { selectedNav = 3; showBudget = true }, icon = { Icon(Icons.Default.Menu, null) }, label = { Text("Mais") }) } },
+            bottomBar = { NavigationBar(containerColor = Color.White) { NavigationBarItem(selected = selectedNav == 0, onClick = { selectedNav = 0 }, icon = { Icon(Icons.Default.ShoppingCart, null) }, label = { Text("Lista") }); NavigationBarItem(selected = selectedNav == 1, onClick = { selectedNav = 1; vm.showHistory = true }, icon = { Icon(Icons.Default.History, null) }, label = { Text("Histórico") }); NavigationBarItem(selected = selectedNav == 2, onClick = { selectedNav = 2 }, icon = { Icon(Icons.Default.Search, null) }, label = { Text("Código") }); NavigationBarItem(selected = selectedNav == 3, onClick = { selectedNav = 3; showMoreMenu = true }, icon = { Icon(Icons.Default.Menu, null) }, label = { Text("Mais") }) } },
             floatingActionButton = {
                 ExtendedFloatingActionButton(
                     onClick = { showAddSheet = true },
@@ -973,6 +975,22 @@ fun MarketlistApp(client: SupabaseClient? = null, vm: MarketViewModel = viewMode
             }
         }
 
+        if (showMoreMenu) {
+            ModalBottomSheet(onDismissRequest = { showMoreMenu = false }) {
+                Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Mais", style = MaterialTheme.typography.headlineSmall)
+                    Text("Configurações e ações da sua conta", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    OutlinedButton(onClick = { showMoreMenu = false; showBudget = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text(if (vm.budget > 0) "Editar orçamento" else "Definir orçamento")
+                    }
+                    OutlinedButton(onClick = { showMoreMenu = false; selectedNav = 0; scope.launch { client?.auth?.signOut() } }, modifier = Modifier.fillMaxWidth(), enabled = client != null) {
+                        Text("Sair da conta")
+                    }
+                    TextButton(onClick = { showMoreMenu = false }, modifier = Modifier.fillMaxWidth()) { Text("Fechar") }
+                    Spacer(Modifier.height(18.dp))
+                }
+            }
+        }
         if (showAddSheet) {
             ModalBottomSheet(
                 onDismissRequest = { showAddSheet = false }
