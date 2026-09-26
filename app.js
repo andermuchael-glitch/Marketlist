@@ -117,19 +117,22 @@ function restoreBackup(file){const reader=new FileReader();reader.onload=()=>{tr
 $("backupBtn").onclick=()=>$("backupDialog").showModal();$("closeBackup").onclick=()=>$("backupDialog").close();$("downloadBackup").onclick=downloadBackup;$("restoreBackup").onclick=()=>$("backupFile").click();$("backupFile").onchange=e=>{const file=e.target.files?.[0];if(file)restoreBackup(file);e.target.value="";};
 $("closeDialog").onclick=closeDialog;$("cancelDialog").onclick=closeDialog;
 $("price").oninput=updatePreview;$("quantity").oninput=updatePreview;$("search").oninput=render;
-const budgetBtn=$("budgetBtn"),budgetDialog=$("budgetDialog"),closeBudget=$("closeBudget"),saveBudgetDialog=$("saveBudgetDialog");
-if(budgetBtn&&budgetDialog)budgetBtn.onclick=()=>{
-  const edit=$("budgetEdit");if(edit)edit.value=budget||"";
-  budgetDialog.showModal();
-};
-if(closeBudget&&budgetDialog)closeBudget.onclick=()=>budgetDialog.close();
-if(saveBudgetDialog&&budgetDialog)saveBudgetDialog.onclick=e=>{
+const budgetBtn=$("budgetBtn"),budgetDialog=$("budgetDialog"),closeBudget=$("closeBudget"),budgetForm=$("budgetForm"),budgetEdit=$("budgetEdit");
+if(budgetBtn&&budgetDialog)budgetBtn.addEventListener("click",()=>{
+  if(budgetEdit)budgetEdit.value=budget?Number(budget).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}):"";
+  if(typeof budgetDialog.showModal==="function")budgetDialog.showModal();
+  else budgetDialog.setAttribute("open","");
+  setTimeout(()=>budgetEdit?.focus(),50);
+});
+if(closeBudget&&budgetDialog)closeBudget.addEventListener("click",()=>budgetDialog.close());
+if(budgetForm&&budgetDialog)budgetForm.addEventListener("submit",e=>{
   e.preventDefault();
-  const edit=$("budgetEdit");
-  budget=Math.max(0,parseDecimal(edit?.value));
-  saveBudget();updateBudgetUI();budgetDialog.close();
-  toast(budget?"Orçamento salvo.":"Orçamento removido.");
-};
+  budget=Math.max(0,parseDecimal(budgetEdit?.value||""));
+  if(!saveBudget())return;
+  updateBudgetUI();
+  budgetDialog.close();
+  toast(budget?"Orçamento de "+money(budget)+" salvo.":"Orçamento removido.");
+});
 $("fabAdd").onclick=()=>openDialog();
 document.querySelectorAll("[data-filter]").forEach(b=>b.onclick=()=>{currentFilter=b.dataset.filter;render()});
 $("clearBought").onclick=()=>{const count=items.filter(i=>i.bought).length;if(!count){toast("Não há itens comprados para limpar.");return}items=items.filter(i=>!i.bought);save();render();toast(`${count} item(ns) comprado(s) removido(s).`)};
