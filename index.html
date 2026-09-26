@@ -30,6 +30,11 @@
       <input id="search" type="search" placeholder="Buscar item..." autocomplete="off">
       <button id="clearBought" class="secondary">Limpar comprados</button>
     </section>
+    <nav class="filters" aria-label="Filtro da lista">
+      <button class="filter active" data-filter="all">Todos</button>
+      <button class="filter" data-filter="pending">Pendentes</button>
+      <button class="filter" data-filter="bought">Comprados</button>
+    </nav>
 
     <section id="emptyState" class="empty">
       <div class="empty-icon">🛒</div>
@@ -45,7 +50,7 @@
   <dialog id="itemDialog">
     <form id="itemForm" method="dialog" class="dialog-card">
       <div class="dialog-head">
-        <h2>Adicionar item</h2>
+        <h2 id="dialogTitle">Adicionar item</h2>
         <button type="button" id="closeDialog" class="close">×</button>
       </div>
       <label>Produto
@@ -60,7 +65,8 @@
         </label>
       </div>
       <div class="preview">Total do item: <strong id="itemPreview">R$ 0,00</strong></div>
-      <button class="primary" type="submit">Adicionar à lista</button>
+      <button class="primary" type="submit" id="submitItem">Adicionar à lista</button>
+      <button type="button" id="cancelDialog" class="secondary dialog-cancel">Cancelar</button>
     </form>
   </dialog>
 
