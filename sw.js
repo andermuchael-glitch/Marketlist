@@ -1,4 +1,4 @@
-const CACHE="marketlist-pwa-v3";
+const CACHE="marketlist-pwa-v4";
 const ASSETS=["./","./index.html","./styles.css","./app.js","./manifest.webmanifest","./icon.svg"];
 
 self.addEventListener("install",event=>{
@@ -25,16 +25,17 @@ self.addEventListener("fetch",event=>{
     event.respondWith(
       fetch(event.request,{cache:"no-store"})
         .then(response=>{
+          if(!response.ok) throw new Error("HTTP "+response.status);
           const copy=response.clone();
           caches.open(CACHE).then(cache=>cache.put(event.request,copy));
           return response;
         })
-        .catch(()=>caches.match(event.request).then(cached=>cached||caches.match("./")))
+        .catch(()=>caches.match(event.request,{ignoreSearch:true}).then(cached=>cached||caches.match("./index.html")))
     );
     return;
   }
 
   event.respondWith(
-    caches.match(event.request).then(cached=>cached||fetch(event.request))
+    caches.match(event.request,{ignoreSearch:true}).then(cached=>cached||fetch(event.request))
   );
 });
