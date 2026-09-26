@@ -263,27 +263,11 @@ fun MarketlistRoot() {
     var configError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
-        val key = withContext(Dispatchers.IO) {
-            runCatching {
-                val connection = URL(MarketlistSupabase.CONFIG_URL).openConnection() as HttpURLConnection
-                connection.connectTimeout = 8000
-                connection.readTimeout = 8000
-                connection.requestMethod = "GET"
-                connection.inputStream.bufferedReader().use { reader ->
-                    val source = reader.readText()
-                    Regex("""key:\s*"([^"]+)"""").find(source)?.groupValues?.get(1)
-                        ?: error("Chave pública do Supabase não encontrada.")
-                }.also { connection.disconnect() }
-            }.getOrElse { error ->
-                configError = error.message ?: "Não foi possível carregar a configuração."
-                null
-            }
-        }
-        if (!key.isNullOrBlank()) {
-            client = runCatching { MarketlistSupabase.createClient(key) }
-                .onFailure { configError = it.message ?: "Não foi possível iniciar o Supabase." }
-                .getOrNull()
-        }
+        client = runCatching {
+            MarketlistSupabase.createClient(MarketlistSupabase.PUBLISHABLE_KEY)
+        }.onFailure {
+            configError = "Não foi possível iniciar o login em nuvem."
+        }.getOrNull()
         configLoading = false
     }
 
