@@ -192,7 +192,7 @@ async function handleLogin(e){
  setAuthMessage("");
  try{
   if(authMode==="signup"){
-   const {data,error}=await authClient.auth.signUp({email,password});
+   const {data,error}=await authClient.auth.signUp({email,password,options:{emailRedirectTo:window.location.origin+window.location.pathname}});
    if(error)throw error;
    if(data.session){setAuthMessage("Conta criada com sucesso.");showApp()}else setAuthMessage("Conta criada. Confira seu e-mail para confirmar o acesso.");
   }else{
