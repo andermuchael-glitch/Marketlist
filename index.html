@@ -13,23 +13,35 @@
 <body>
   <main class="app-shell">
     <header class="topbar">
-      <div>
-        <p class="eyebrow">LISTA DE COMPRAS</p>
-        <h1>Marketlist</h1>
+      <div class="brand">
+        <div class="brand-mark">M</div>
+        <div>
+          <p class="eyebrow">LISTA DE COMPRAS</p>
+          <h1>Marketlist</h1>
+        </div>
       </div>
-      <button id="installBtn" class="icon-btn" hidden aria-label="Instalar aplicativo">⇩</button>
+      <div class="top-actions">
+        <button id="budgetBtn" class="icon-btn" aria-label="Orçamento" title="Orçamento">R$</button>
+        <button id="historyBtn" class="icon-btn" aria-label="Histórico" title="Histórico">◷</button>
+        <button id="installBtn" class="icon-btn" hidden aria-label="Instalar aplicativo">⇩</button>
+      </div>
     </header>
 
     <section class="summary">
-      <div><span>Total da lista</span><strong id="grandTotal">R$ 0,00</strong></div>
+      <div class="summary-total">
+        <span>Total estimado</span>
+        <strong id="grandTotal">R$ 0,00</strong>
+      </div>
       <div><span>Pendentes</span><strong id="pendingCount">0</strong></div>
       <div><span>Comprados</span><strong id="boughtCount">0</strong></div>
     </section>
 
     <section class="toolbar">
-      <input id="search" type="search" placeholder="Buscar na lista..." autocomplete="off">
-      <button id="clearBought" class="secondary">Limpar</button>
-      <button id="historyBtn" class="secondary">Histórico</button>
+      <div class="search-box">
+        <span>⌕</span>
+        <input id="search" type="search" placeholder="Buscar produto..." autocomplete="off">
+      </div>
+      <button id="clearBought" class="secondary">Limpar comprados</button>
     </section>
     <nav class="filters" aria-label="Filtro da lista">
       <button class="filter active" data-filter="all">Todos</button>
@@ -38,9 +50,9 @@
     </nav>
 
     <section id="emptyState" class="empty">
-      <div class="empty-icon">🛒</div>
+      <div class="empty-icon">＋</div>
       <h2>Sua lista está vazia</h2>
-      <p>Adicione os produtos agora. No mercado, informe o preço e ajuste a quantidade diretamente na lista.</p>
+      <p>Toque no botão <strong>+</strong> para adicionar seu primeiro produto.</p>
     </section>
 
     <section id="categoryFilters" class="filters category-filters" aria-label="Categorias"></section>
