@@ -245,6 +245,7 @@ fun MarketlistApp(vm: MarketViewModel = viewModel()) {
     var showBudget by remember { mutableStateOf(false) }
     var budgetText by remember(vm.budget) { mutableStateOf(if (vm.budget == 0.0) "" else vm.budget.toString()) }
     var currentFilter by remember { mutableStateOf("Todos") }
+    var selectedNav by remember { mutableIntStateOf(0) }
 
     MaterialTheme(
         colorScheme = lightColorScheme(
@@ -259,27 +260,24 @@ fun MarketlistApp(vm: MarketViewModel = viewModel()) {
                 TopAppBar(
                     title = {
                         Column {
-                            Text("Marketlist", style = MaterialTheme.typography.titleLarge)
-                            Text(
-                                if (vm.items.isEmpty()) "Sua lista está pronta para começar"
-                                else "${vm.pending} pendentes • ${vm.bought} comprados",
-                                style = MaterialTheme.typography.labelMedium
-                            )
+                            Text("Marketlist", color = Color.White, style = MaterialTheme.typography.titleLarge)
+                            Text("Sua lista de compras", color = Color.White.copy(alpha = .72f), style = MaterialTheme.typography.labelSmall)
                         }
                     },
                     actions = {
                         IconButton(onClick = { vm.showHistory = true }) {
-                            Icon(Icons.Default.History, "Histórico de compras")
+                            Icon(Icons.Default.History, "Histórico de compras", tint = Color.White)
                         }
                     }
                 )
             },
+            bottomBar = { NavigationBar(containerColor = Color.White) { NavigationBarItem(selected = selectedNav == 0, onClick = { selectedNav = 0 }, icon = { Icon(Icons.Default.ShoppingCart, null) }, label = { Text("Lista") }); NavigationBarItem(selected = selectedNav == 1, onClick = { selectedNav = 1; vm.showHistory = true }, icon = { Icon(Icons.Default.History, null) }, label = { Text("Histórico") }); NavigationBarItem(selected = selectedNav == 2, onClick = { selectedNav = 2 }, icon = { Icon(Icons.Default.Search, null) }, label = { Text("Código") }); NavigationBarItem(selected = selectedNav == 3, onClick = { selectedNav = 3; showBudget = true }, icon = { Icon(Icons.Default.MoreVert, null) }, label = { Text("Mais") }) } },
             floatingActionButton = {
                 ExtendedFloatingActionButton(
                     onClick = { showAddSheet = true },
                     icon = { Icon(Icons.Default.Add, null) },
                     text = { Text("Novo produto") },
-                    containerColor = MaterialTheme.colorScheme.primary,
+                    containerColor = Color(0xFF176BEE),
                     contentColor = Color.White
                 )
             }
@@ -302,7 +300,7 @@ fun MarketlistApp(vm: MarketViewModel = viewModel()) {
                 // Resumo compacto: não ocupa a área principal da lista.
                 Card(
                     Modifier.fillMaxWidth(),
-                    RoundedCornerShape(20.dp),
+                    RoundedCornerShape(22.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.primary
                     )
