@@ -123,10 +123,23 @@ $("itemForm").onsubmit=e=>{e.preventDefault();const name=$("name").value.trim(),
 $("historyBtn").onclick=()=>{$("historyDialog").showModal();renderHistory()};$("closeHistory").onclick=()=>$("historyDialog").close();
 $("clearHistory").onclick=()=>{if(confirm("Apagar todo o histórico de compras?")){history=[];saveHistory();renderHistory();toast("Histórico apagado.")}};
 $("finishShopping").onclick=()=>{
- if(!items.length){toast("Adicione pelo menos um item antes de finalizar.");return}
+ if(!items.length){toast("Adicione pelo menos um item antes de arquivar.");return}
+ const boughtItems=items.filter(i=>i.bought);
+ if(!boughtItems.length){toast("Marque os itens comprados antes de arquivar. Os pendentes continuam na lista.");return}
  const now=new Date(),date=now.toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"});
- history.unshift({id:Date.now(),date,total:total(),count:items.length,items:items.map(i=>({...i}))});
- history=history.slice(0,30);saveHistory();items=[];save();render();toast("Compra salva no histórico.");
+ history.unshift({
+   id:Date.now(),
+   date,
+   total:boughtItems.reduce((sum,i)=>sum+itemTotal(i),0),
+   count:boughtItems.length,
+   items:boughtItems.map(i=>({...i}))
+ });
+ history=history.slice(0,30);
+ saveHistory();
+ items=items.filter(i=>!i.bought);
+ save();
+ render();
+ toast("Compra arquivada. Os itens pendentes continuam na lista.");
 };
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;$("installBtn").hidden=false});
 $("installBtn").onclick=async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$("installBtn").hidden=true};
