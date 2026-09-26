@@ -34,13 +34,16 @@ function toast(message,undo=false){
  if(undo)$("undoDelete").onclick=()=>{if(lastDeleted){items.unshift(lastDeleted);lastDeleted=null;save();render();el.classList.remove("show")}};
 }
 function updateBudgetUI(){
- const budgetValue=$("budgetValue"),status=$("budgetStatus");
+ const budgetValue=$("budgetValue"),status=$("budgetStatus"),spentEl=$("budgetSpent"),remainingEl=$("budgetRemaining"),progress=$("budgetProgress");
+ const spent=total(),diff=budget-spent;
  if(budgetValue)budgetValue.textContent=budget?money(budget):"Não definido";
+ if(spentEl)spentEl.textContent=money(spent);
+ if(remainingEl)remainingEl.textContent=budget?money(Math.abs(diff)):"—";
+ if(progress)progress.style.width=budget?Math.min(100,Math.max(0,(spent/budget)*100))+"%":"0%";
  if(status){
-  const diff=budget-total();
   if(!budget){status.textContent="Defina um orçamento para acompanhar quanto ainda pode gastar.";status.className="budget-status"}
-  else if(diff>=0){status.textContent=`Você ainda pode gastar ${money(diff)}.`;status.className="budget-status"}
-  else{status.textContent=`Orçamento ultrapassado em ${money(Math.abs(diff))}.`;status.className="budget-status over"}
+  else if(diff>=0){status.textContent="Você ainda pode gastar "+money(diff)+".";status.className="budget-status"}
+  else{status.textContent="Orçamento ultrapassado em "+money(Math.abs(diff))+".";status.className="budget-status over"}
  }
 }
 function renderCategories(){
@@ -132,7 +135,17 @@ if(budgetForm&&budgetDialog)budgetForm.addEventListener("submit",e=>{
   updateBudgetUI();
   budgetDialog.close();
   toast(budget?"Orçamento de "+money(budget)+" salvo.":"Orçamento removido.");
+});\nconst budgetEditButton=$("budgetEditButton");
+if(budgetEditButton)budgetEditButton.onclick=()=>budgetBtn?.click();
+document.querySelectorAll("[data-nav]").forEach(btn=>btn.onclick=()=>{
+ const target=btn.dataset.nav;
+ if(target==="list")window.scrollTo({top:0,behavior:"smooth"});
+ if(target==="history")$("historyBtn")?.click();
+ if(target==="backup")$("backupBtn")?.click();
+ if(target==="budget")budgetBtn?.click();
+ document.querySelectorAll("[data-nav]").forEach(n=>n.classList.toggle("active",n===btn));
 });
+
 $("fabAdd").onclick=()=>openDialog();
 document.querySelectorAll("[data-filter]").forEach(b=>b.onclick=()=>{currentFilter=b.dataset.filter;render()});
 $("clearBought").onclick=()=>{const count=items.filter(i=>i.bought).length;if(!count){toast("Não há itens comprados para limpar.");return}items=items.filter(i=>!i.bought);save();render();toast(`${count} item(ns) comprado(s) removido(s).`)};
