@@ -13,12 +13,14 @@ let items=readJSON(KEY,[]);
 let history=readJSON(HISTORY_KEY,[]);
 let budget=readBudget();
 let deferredPrompt=null,currentFilter="all",currentCategory="all",editingId=null,lastDeleted=null;
+let cloudReady=false,cloudSyncTimer=null,cloudSyncing=false;
 const $=id=>document.getElementById(id);
 const money=v=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Number(v)||0);
 function storageError(){toast("Não foi possível salvar. Verifique o espaço de armazenamento do navegador.");}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(items));return true}catch(e){storageError();return false}}
-function saveBudget(){try{localStorage.setItem(BUDGET_KEY,String(budget));return true}catch(e){storageError();return false}}
-function saveHistory(){try{localStorage.setItem(HISTORY_KEY,JSON.stringify(history));return true}catch(e){storageError();return false}}
+function scheduleCloudSync(){if(!cloudReady||!authClient)return;clearTimeout(cloudSyncTimer);cloudSyncTimer=setTimeout(()=>syncCloudToSupabase(),700)}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(items));scheduleCloudSync();return true}catch(e){storageError();return false}}
+function saveBudget(){try{localStorage.setItem(BUDGET_KEY,String(budget));scheduleCloudSync();return true}catch(e){storageError();return false}}
+function saveHistory(){try{localStorage.setItem(HISTORY_KEY,JSON.stringify(history));scheduleCloudSync();return true}catch(e){storageError();return false}}
 const itemTotal=i=>(Number(i.price)||0)*(Number(i.quantity)||0);
 const total=()=>items.reduce((s,i)=>s+itemTotal(i),0);
 const escapeHtml=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
@@ -169,6 +171,54 @@ $("list").onkeydown=e=>{const b=e.target.closest("[data-action]");if(!b)return;
  if((b.dataset.action==="price-input"||b.dataset.action==="qty-input")&&e.key==="Enter"){e.preventDefault();b.blur();}
 };
 let authClient=null, authConfigured=false, authMode="login";
+async function syncCloudToSupabase(){
+ if(!authClient||cloudSyncing)return;
+ const {data:sessionData}=await authClient.auth.getSession();
+ const session=sessionData?.session;
+ if(!session)return;
+ cloudSyncing=true;
+ try{
+  const payload={user_id:session.user.id,items:JSON.stringify(items),budget:Number(budget)||0,history:JSON.stringify(history),updated_at:new Date().toISOString()};
+  const {error}=await authClient.from("marketlist_data").upsert(payload,{onConflict:"user_id"});
+  if(error)throw error;
+ }catch(error){
+  console.warn("Marketlist cloud sync:",error);
+ }finally{cloudSyncing=false}
+}
+async function syncFromSupabase(){
+ if(!authClient)return false;
+ const {data:sessionData}=await authClient.auth.getSession();
+ const session=sessionData?.session;
+ if(!session)return false;
+ try{
+  const {data,error}=await authClient.from("marketlist_data").select("user_id,items,budget,history,updated_at").eq("user_id",session.user.id).maybeSingle();
+  if(error)throw error;
+  const localHasData=items.length>0||history.length>0||Number(budget)>0;
+  if(!data){
+   if(localHasData){cloudReady=true;await syncCloudToSupabase();}
+   else cloudReady=true;
+   render();
+   return true;
+  }
+  let remoteItems=[];let remoteHistory=[];let remoteBudget=0;
+  try{remoteItems=typeof data.items==="string"?JSON.parse(data.items||"[]"):data.items||[]}catch{}
+  try{remoteHistory=typeof data.history==="string"?JSON.parse(data.history||"[]"):data.history||[]}catch{}
+  remoteBudget=Number(data.budget)||0;
+  if(remoteItems.length||remoteHistory.length||remoteBudget>0){
+   items=Array.isArray(remoteItems)?remoteItems:[];history=Array.isArray(remoteHistory)?remoteHistory.slice(0,30):[];budget=Math.max(0,remoteBudget);
+   try{localStorage.setItem(KEY,JSON.stringify(items));localStorage.setItem(HISTORY_KEY,JSON.stringify(history));localStorage.setItem(BUDGET_KEY,String(budget));}catch{}
+  }else if(localHasData){
+   cloudReady=true;await syncCloudToSupabase();render();return true;
+  }
+  cloudReady=true;render();return true;
+ }catch(error){
+  console.warn("Marketlist cloud load:",error);
+  cloudReady=false;
+  setAuthMessage("Login realizado, mas a sincronização da lista ainda não está disponível. Crie a tabela do Marketlist no Supabase.");
+  return false;
+ }
+}
+
 function setAuthMessage(message,isError=false){const el=$("authMessage");if(el){el.textContent=message||"";el.classList.toggle("error",isError)}}
 function showApp(){const auth=$("authScreen"),app=document.querySelector(".app-shell");if(auth)auth.hidden=true;if(app)app.hidden=false}
 function showAuth(){const auth=$("authScreen"),app=document.querySelector(".app-shell");if(auth)auth.hidden=false;if(app)app.hidden=true}
@@ -179,8 +229,8 @@ async function setupAuth(){
   authClient=window.supabase.createClient(cfg.url,cfg.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
   authConfigured=true;
   const {data}=await authClient.auth.getSession();
-  if(data?.session)showApp();else showAuth();
-  authClient.auth.onAuthStateChange((_event,session)=>{if(session)showApp();else showAuth()});
+  if(data?.session){showApp();await syncFromSupabase();}else showAuth();
+  authClient.auth.onAuthStateChange((_event,session)=>{if(session){showApp();syncFromSupabase();}else{cloudReady=false;showAuth()}});
   return true;
  }catch(e){showAuth();setAuthMessage("Não foi possível iniciar o login. Verifique a configuração do Supabase.",true);return false}
 }
@@ -198,6 +248,7 @@ async function handleLogin(e){
   }else{
    const {error}=await authClient.auth.signInWithPassword({email,password});
    if(error)throw error;
+   await syncFromSupabase();
   }
  }catch(error){setAuthMessage(error?.message||"Não foi possível entrar.",true)}
  finally{btn.disabled=false;btn.textContent=authMode==="signup"?"Criar conta":"Entrar"}
