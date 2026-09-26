@@ -27,6 +27,14 @@
       <div><span>Comprados</span><strong id="boughtCount">0</strong></div>
     </section>
 
+    <section class="quick-add" aria-label="Adicionar produto">
+      <input id="quickName" maxlength="80" placeholder="O que você precisa comprar?" autocomplete="off">
+      <select id="quickCategory" aria-label="Categoria">
+        <option>Outros</option><option>Hortifruti</option><option>Carnes</option><option>Laticínios</option><option>Padaria</option><option>Limpeza</option><option>Bebidas</option><option>Higiene</option><option>Mercearia</option>
+      </select>
+      <button id="quickAddBtn" class="primary">Adicionar</button>
+    </section>
+
     <section class="budget-row">
       <input id="budgetInput" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Definir orçamento">
       <button id="saveBudget" class="secondary">Salvar orçamento</button>
@@ -46,7 +54,7 @@
     <section id="emptyState" class="empty">
       <div class="empty-icon">🛒</div>
       <h2>Sua lista está vazia</h2>
-      <p>Adicione produtos, informe preço e quantidade e acompanhe o total.</p>
+      <p>Adicione os produtos agora. No mercado, informe o preço e ajuste a quantidade diretamente na lista.</p>
     </section>
 
     <section id="categoryFilters" class="filters category-filters" aria-label="Categorias"></section>
@@ -59,9 +67,7 @@
     </div></dialog>
   </main>
 
-  <button id="addBtn" class="fab" aria-label="Adicionar item">+</button>
-
-  <dialog id="itemDialog">
+    <dialog id="itemDialog">
     <form id="itemForm" method="dialog" class="dialog-card">
       <div class="dialog-head">
         <h2 id="dialogTitle">Adicionar item</h2>
