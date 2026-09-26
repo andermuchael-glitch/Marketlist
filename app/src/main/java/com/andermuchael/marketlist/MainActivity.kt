@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -50,11 +52,21 @@ data class ShoppingItem(
     val total: Double get() = price * quantity
 }
 
+data class HistoryItem(
+    val name: String,
+    val category: String,
+    val price: Double,
+    val quantity: Double
+) {
+    val total: Double get() = price * quantity
+}
+
 data class PurchaseHistory(
     val id: Long,
     val date: String,
     val total: Double,
-    val count: Int
+    val count: Int,
+    val items: List<HistoryItem> = emptyList()
 )
 
 class MarketViewModel(app: Application) : AndroidViewModel(app) {
@@ -98,7 +110,24 @@ class MarketViewModel(app: Application) : AndroidViewModel(app) {
         val array = JSONArray(prefs.getString(HISTORY_KEY, "[]") ?: "[]")
         List(array.length()) { i ->
             val o = array.getJSONObject(i)
-            PurchaseHistory(o.optLong("id"), o.optString("date"), o.optDouble("total"), o.optInt("count"))
+            val savedItems = mutableListOf<HistoryItem>()
+            val itemArray = o.optJSONArray("items") ?: JSONArray()
+            for (j in 0 until itemArray.length()) {
+                val item = itemArray.getJSONObject(j)
+                savedItems += HistoryItem(
+                    item.optString("name"),
+                    item.optString("category", "Outros"),
+                    item.optDouble("price", 0.0),
+                    item.optDouble("quantity", 1.0)
+                )
+            }
+            PurchaseHistory(
+                o.optLong("id"),
+                o.optString("date"),
+                o.optDouble("total"),
+                o.optInt("count"),
+                savedItems
+            )
         }
     }.getOrDefault(emptyList())
 
@@ -117,7 +146,20 @@ class MarketViewModel(app: Application) : AndroidViewModel(app) {
         val array = JSONArray()
         history.forEach { h ->
             array.put(JSONObject().apply {
-                put("id", h.id); put("date", h.date); put("total", h.total); put("count", h.count)
+                put("id", h.id)
+                put("date", h.date)
+                put("total", h.total)
+                put("count", h.count)
+                put("items", JSONArray().apply {
+                    h.items.forEach { item ->
+                        put(JSONObject().apply {
+                            put("name", item.name)
+                            put("category", item.category)
+                            put("price", item.price)
+                            put("quantity", item.quantity)
+                        })
+                    }
+                })
             })
         }
         prefs.edit().putString(HISTORY_KEY, array.toString()).apply()
@@ -162,12 +204,18 @@ class MarketViewModel(app: Application) : AndroidViewModel(app) {
         prefs.edit().putString(BUDGET_KEY, budget.toString()).apply()
     }
 
-    fun finishShopping() {
-        if (items.isEmpty()) return
+    fun archiveBought() {
+        val boughtItems = items.filter { it.bought }
+        if (boughtItems.isEmpty()) return
         val date = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale("pt", "BR")).format(Date())
-        history = (listOf(PurchaseHistory(System.currentTimeMillis(), date, total, items.size)) + history).take(30)
+        val historyItems = boughtItems.map { HistoryItem(it.name, it.category, it.price, it.quantity) }
+        val entry = PurchaseHistory(
+            System.currentTimeMillis(), date,
+            boughtItems.sumOf { it.total }, boughtItems.size, historyItems
+        )
+        history = (listOf(entry) + history).take(30)
         saveHistory()
-        items = emptyList()
+        items = items.filterNot { it.bought }
         saveItems()
     }
 
@@ -228,21 +276,33 @@ fun MarketlistApp(vm: MarketViewModel = viewModel()) {
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     Column(Modifier.padding(18.dp)) {
-                        Text("TOTAL", color = Color.White.copy(alpha = .75f))
+                        Text("TOTAL DA LISTA", color = Color.White.copy(alpha = .75f))
                         Text(money(vm.total), style = MaterialTheme.typography.headlineMedium, color = Color.White)
                         Spacer(Modifier.height(8.dp))
-                        Text("${vm.pending} pendentes  •  §{vm.bought} comprados", color = Color.White)
+                        Text("${vm.pending} pendentes  •  ${vm.bought} comprados", color = Color.White)
                         if (vm.budget > 0) {
                             Text(
-                                if (vm.remainingBudget >= 0) "Restante: §{money(vm.remainingBudget)}"
-                                else "Acima do orçamento: §{money(-vm.remainingBudget)}",
+                                if (vm.remainingBudget >= 0) "Restante: ${money(vm.remainingBudget)}"
+                                else "Acima do orçamento: ${money(-vm.remainingBudget)}",
                                 color = if (vm.remainingBudget >= 0) Color.White else Color(0xFFFFD6D6)
                             )
                         }
                     }
                 }
 
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(8.dp))
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        "A lista é salva automaticamente. No mercado, marque apenas o que comprou. Os pendentes nunca somem.",
+                        modifier = Modifier.padding(12.dp),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
@@ -261,7 +321,7 @@ fun MarketlistApp(vm: MarketViewModel = viewModel()) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
                         value = vm.quickName, onValueChange = { vm.quickName = it },
-                        modifier = Modifier.weight(1f), placeholder = { Text("O que você precisa comprar?") },
+                        modifier = Modifier.weight(1f), placeholder = { Text("Adicionar produto à lista") },
                         singleLine = true
                     )
                     Box {
@@ -296,7 +356,7 @@ fun MarketlistApp(vm: MarketViewModel = viewModel()) {
                 }
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = vm::clearBought, enabled = vm.bought > 0) { Text("Limpar comprados") }
+                    TextButton(onClick = vm::clearBought, enabled = vm.bought > 0) { Text("Excluir comprados") }
                 }
 
                 if (visible.isEmpty()) {
@@ -370,9 +430,17 @@ fun MarketlistApp(vm: MarketViewModel = viewModel()) {
                     }
                 }
 
-                if (vm.items.isNotEmpty()) {
-                    Button(onClick = vm::finishShopping, modifier = Modifier.fillMaxWidth()) {
-                        Text("✓ Finalizar e salvar compra")
+                if (vm.bought > 0) {
+                    Button(onClick = vm::archiveBought, modifier = Modifier.fillMaxWidth()) {
+                        Text("✓ Arquivar ${vm.bought} comprado(s)")
+                    }
+                } else if (vm.items.isNotEmpty()) {
+                    OutlinedButton(
+                        onClick = { },
+                        enabled = false,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Marque os itens comprados para arquivar")
                     }
                 }
             }
@@ -389,7 +457,7 @@ fun MarketlistApp(vm: MarketViewModel = viewModel()) {
                             Card {
                                 Column(Modifier.padding(10.dp)) {
                                     Text(h.date, style = MaterialTheme.typography.titleSmall)
-                                    Text("§{money(h.total)} • §{h.count} item(ns)")
+                                    Text("${money(h.total)} • ${h.count} item(ns)")
                                 }
                             }
                         }
@@ -403,3 +471,7 @@ fun MarketlistApp(vm: MarketViewModel = viewModel()) {
         }
     }
 }
+
+
+private fun formatQuantity(value: Double): String =
+    if (value % 1.0 == 0.0) value.toInt().toString() else value.toString()
