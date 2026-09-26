@@ -830,7 +830,7 @@ fun MarketlistApp(client: SupabaseClient? = null, vm: MarketViewModel = viewMode
                         )
                         Column(
                             Modifier
-                                .padding(horizontal = 14.dp)
+                                .padding(start = 14.dp)
                                 .clickable { showBudget = true },
                             horizontalAlignment = Alignment.End
                         ) {
@@ -840,6 +840,33 @@ fun MarketlistApp(client: SupabaseClient? = null, vm: MarketViewModel = viewMode
                                 color = Color.White,
                                 style = MaterialTheme.typography.titleSmall
                             )
+                        }
+                    }
+                    if (vm.budget > 0) {
+                        Spacer(Modifier.height(8.dp))
+                        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp)) {
+                            LinearProgressIndicator(
+                                progress = { (vm.total / vm.budget).coerceIn(0.0, 1.0).toFloat() },
+                                modifier = Modifier.fillMaxWidth().height(6.dp),
+                                color = if (vm.remainingBudget >= 0) Color(0xFF35E08A) else Color(0xFFFF5B66),
+                                trackColor = Color.White.copy(alpha = .22f)
+                            )
+                            Row(
+                                Modifier.fillMaxWidth().padding(top = 5.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    "Gasto até agora " + money(vm.total),
+                                    color = Color.White.copy(alpha = .78f),
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                                Text(
+                                    if (vm.remainingBudget >= 0) "Ainda pode gastar " + money(vm.remainingBudget)
+                                    else "Ultrapassou " + money(-vm.remainingBudget),
+                                    color = if (vm.remainingBudget >= 0) Color(0xFFB8FFD8) else Color(0xFFFFB8BD),
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
                         }
                     }
                 }
