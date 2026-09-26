@@ -11,6 +11,9 @@ const saveHistory=()=>localStorage.setItem(HISTORY_KEY,JSON.stringify(history));
 const itemTotal=i=>(Number(i.price)||0)*(Number(i.quantity)||0);
 const total=()=>items.reduce((s,i)=>s+itemTotal(i),0);
 const escapeHtml=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+const parseDecimal=value=>{let s=String(value??"").trim().replace(/R\$\s?/gi,"").replace(/\s/g,"");if(!s)return 0;if(s.includes(",")&&s.includes("."))s=s.replace(/\./g,"").replace(",",".");else s=s.replace(",",".");const n=Number(s);return Number.isFinite(n)?n:0;};
+const formatPriceInput=v=>Number(v)>0?Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}):"";
+const formatQtyInput=v=>Number(v)%1===0?Number(v).toString():Number(v).toLocaleString("pt-BR",{maximumFractionDigits:2});
 const formatQty=q=>Number(q)%1===0?Number(q).toString():Number(q).toLocaleString("pt-BR",{maximumFractionDigits:2});
 
 function toast(message,undo=false){
@@ -35,8 +38,8 @@ function renderCategories(){
 }
 function updateItemField(id,field,value){
  const item=items.find(i=>i.id===id); if(!item)return;
- if(field==="price") item.price=Math.max(0,Number(value)||0);
- if(field==="quantity") item.quantity=Math.max(0.01,Number(value)||0.01);
+ if(field==="price") item.price=Math.max(0,parseDecimal(value));
+ if(field==="quantity") item.quantity=Math.max(0.01,parseDecimal(value)||0.01);
  save();
  const totalEl=document.querySelector('[data-total-id="'+id+'"]');
  if(totalEl) totalEl.textContent=money(itemTotal(item));
@@ -77,10 +80,10 @@ function render(){
    <div class="market-controls">
      <div class="qty-control" aria-label="Quantidade">
        <button type="button" data-action="qty-minus" data-id="${i.id}">−</button>
-       <input type="number" min="0.01" step="0.01" value="${i.quantity}" data-action="qty-input" data-id="${i.id}" aria-label="Quantidade">
+       <input type="text" inputmode="decimal" value="${formatQtyInput(i.quantity)}" data-action="qty-input" data-id="${i.id}" aria-label="Quantidade">
        <button type="button" data-action="qty-plus" data-id="${i.id}">+</button>
      </div>
-     <label class="price-control"><span>R$</span><input type="number" min="0" step="0.01" inputmode="decimal" value="${Number(i.price)||0}" data-action="price-input" data-id="${i.id}" aria-label="Preço unitário"></label>
+     <label class="price-control"><span>R$</span><input type="text" inputmode="decimal" value="${formatPriceInput(i.price)}" placeholder="0,00" data-action="price-input" data-id="${i.id}" aria-label="Preço unitário"></label>
      <button class="delete" data-action="delete" data-id="${i.id}" aria-label="Excluir">✕</button>
    </div>
    <div class="market-hint">${i.bought?"Comprado":"No mercado: ajuste preço e quantidade aqui"}</div>
@@ -101,6 +104,10 @@ function renderHistory(){
  box.innerHTML=history.map(h=>`<article class="history-entry"><strong>${escapeHtml(h.date)} — ${money(h.total)}</strong><small>${h.count} item(ns)</small><div class="history-items">${h.items.map(i=>escapeHtml(i.name)+ " ("+money(itemTotal(i))+")").join(" · ")}</div></article>`).join("");
 }
 
+function createBackup(){return {app:"Marketlist",version:2,exportedAt:new Date().toISOString(),items:items.map(i=>({...i})),history:history.map(h=>({...h,items:Array.isArray(h.items)?h.items.map(i=>({...i})):[]})),budget:Number(budget)||0};}
+function downloadBackup(){const data=JSON.stringify(createBackup(),null,2);const blob=new Blob([data],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");const stamp=new Date().toISOString().slice(0,10);a.href=url;a.download="marketlist-backup-"+stamp+".json";document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);toast("Backup baixado com sucesso.");}
+function restoreBackup(file){const reader=new FileReader();reader.onload=()=>{try{const data=JSON.parse(reader.result);if(data?.app!=="Marketlist"||!Array.isArray(data.items)||!Array.isArray(data.history))throw new Error("invalid");if(!confirm("Restaurar este backup? A lista e o histórico atuais serão substituídos pelos dados do arquivo."))return;items=data.items.filter(i=>i&&i.name).map(i=>({id:i.id||crypto.randomUUID?.()||String(Date.now()+Math.random()),name:String(i.name),price:Math.max(0,parseDecimal(i.price)),quantity:Math.max(0.01,parseDecimal(i.quantity)||0.01),category:String(i.category||"Outros"),bought:Boolean(i.bought)}));history=data.history.slice(0,30);budget=Math.max(0,parseDecimal(data.budget));save();saveHistory();saveBudget();render();toast("Backup restaurado. Sua lista voltou com sucesso.");}catch(e){toast("Não foi possível restaurar: arquivo de backup inválido.");}};reader.readAsText(file);}
+$("backupBtn").onclick=()=>$("backupDialog").showModal();$("closeBackup").onclick=()=>$("backupDialog").close();$("downloadBackup").onclick=downloadBackup;$("restoreBackup").onclick=()=>$("backupFile").click();$("backupFile").onchange=e=>{const file=e.target.files?.[0];if(file)restoreBackup(file);e.target.value="";};
 $("closeDialog").onclick=closeDialog;$("cancelDialog").onclick=closeDialog;
 $("price").oninput=updatePreview;$("quantity").oninput=updatePreview;$("search").oninput=render;
 $("saveBudget").onclick=()=>{budget=Math.max(0,Number($("budgetInput").value)||0);saveBudget();updateBudgetUI();toast(budget?"Orçamento salvo.":"Orçamento removido.")};
