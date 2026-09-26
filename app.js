@@ -1,13 +1,20 @@
 const KEY="marketlist-items-v1", BUDGET_KEY="marketlist-budget-v1", HISTORY_KEY="marketlist-history-v1";
-let items=JSON.parse(localStorage.getItem(KEY)||"[]");
-let history=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]");
-let budget=Number(localStorage.getItem(BUDGET_KEY)||0);
+function readJSON(key,fallback){
+  try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):fallback;}catch(e){return fallback;}
+}
+function readBudget(){
+  try{return Math.max(0,parseDecimal(localStorage.getItem(BUDGET_KEY)||"0"));}catch(e){return 0;}
+}
+let items=readJSON(KEY,[]);
+let history=readJSON(HISTORY_KEY,[]);
+let budget=readBudget();
 let deferredPrompt=null,currentFilter="all",currentCategory="all",editingId=null,lastDeleted=null;
 const $=id=>document.getElementById(id);
 const money=v=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Number(v)||0);
-const save=()=>localStorage.setItem(KEY,JSON.stringify(items));
-const saveBudget=()=>localStorage.setItem(BUDGET_KEY,String(budget));
-const saveHistory=()=>localStorage.setItem(HISTORY_KEY,JSON.stringify(history));
+function storageError(){toast("Não foi possível salvar. Verifique o espaço de armazenamento do navegador.");}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(items));return true}catch(e){storageError();return false}}
+function saveBudget(){try{localStorage.setItem(BUDGET_KEY,String(budget));return true}catch(e){storageError();return false}}
+function saveHistory(){try{localStorage.setItem(HISTORY_KEY,JSON.stringify(history));return true}catch(e){storageError();return false}}
 const itemTotal=i=>(Number(i.price)||0)*(Number(i.quantity)||0);
 const total=()=>items.reduce((s,i)=>s+itemTotal(i),0);
 const escapeHtml=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
@@ -23,9 +30,8 @@ function toast(message,undo=false){
  if(undo)$("undoDelete").onclick=()=>{if(lastDeleted){items.unshift(lastDeleted);lastDeleted=null;save();render();el.classList.remove("show")}};
 }
 function updateBudgetUI(){
- const budgetValue=$("budgetValue"),budgetInput=$("budgetInput"),status=$("budgetStatus");
- if(budgetValue)budgetValue.textContent=money(budget);
- if(budgetInput)budgetInput.value=budget||"";
+ const budgetValue=$("budgetValue"),status=$("budgetStatus");
+ if(budgetValue)budgetValue.textContent=budget?money(budget):"Não definido";
  if(status){
   const diff=budget-total();
   if(!budget){status.textContent="Defina um orçamento para acompanhar quanto ainda pode gastar.";status.className="budget-status"}
@@ -54,12 +60,6 @@ function changeQuantity(id,delta){
  item.quantity=Math.max(0.01,(Number(item.quantity)||1)+delta);
  save(); render();
 }
-function addQuickItem(){
- const name=$("quickName").value.trim(); if(!name){$("quickName").focus();return}
- const category=$("quickCategory").value||"Outros";
- items.unshift({id:crypto.randomUUID?crypto.randomUUID():Date.now().toString(),name,price:0,quantity:1,category,bought:false});
- save(); render(); $("quickName").value=""; $("quickName").focus(); toast("Produto adicionado. No mercado, informe preço e quantidade na própria lista.");
-}
 function render(){
  const term=$("search").value.trim().toLowerCase();
  let visible=items.filter(i=>i.name.toLowerCase().includes(term));
@@ -78,7 +78,7 @@ function render(){
  <div class="item-main">
    <div class="item-head">
      <div><div class="name">${escapeHtml(i.name)}</div><div class="meta">${escapeHtml(i.category||"Outros")}</div></div>
-     <div class="item-total" data-total-id="${i.id}">${money(itemTotal(i))}</div>
+     <div class="item-actions-inline"><button class="edit" type="button" data-action="edit" data-id="${i.id}" aria-label="Editar ${escapeHtml(i.name)}" title="Editar">✎</button><div class="item-total" data-total-id="${i.id}">${money(itemTotal(i))}</div></div>
    </div>
    <div class="market-controls">
      <div class="qty-control" aria-label="Quantidade">
@@ -130,6 +130,7 @@ $("fabAdd").onclick=()=>openDialog();
 document.querySelectorAll("[data-filter]").forEach(b=>b.onclick=()=>{currentFilter=b.dataset.filter;render()});
 $("clearBought").onclick=()=>{const count=items.filter(i=>i.bought).length;if(!count){toast("Não há itens comprados para limpar.");return}items=items.filter(i=>!i.bought);save();render();toast(`${count} item(ns) comprado(s) removido(s).`)};
 $("list").onclick=e=>{const b=e.target.closest("[data-action]");if(!b)return;const id=b.dataset.id,item=items.find(i=>i.id===id);if(!item)return;
+ if(b.dataset.action==="edit"){openDialog(item);return}
  if(b.dataset.action==="toggle"){item.bought=!item.bought;save();render();return}
  if(b.dataset.action==="qty-plus"){changeQuantity(id,1);return}
  if(b.dataset.action==="qty-minus"){changeQuantity(id,-1);return}
@@ -146,6 +147,7 @@ $("list").onfocusout=e=>{const b=e.target.closest("[data-action]");if(!b)return;
 $("list").onkeydown=e=>{const b=e.target.closest("[data-action]");if(!b)return;
  if((b.dataset.action==="price-input"||b.dataset.action==="qty-input")&&e.key==="Enter"){e.preventDefault();b.blur();}
 };
+function init(){
 $("itemForm").onsubmit=e=>{
  e.preventDefault();
  const name=$("name").value.trim();
@@ -184,5 +186,7 @@ $("finishShopping").onclick=()=>{
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;$("installBtn").hidden=false});
 $("installBtn").onclick=async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$("installBtn").hidden=true};
 window.addEventListener("appinstalled",()=>{$("installBtn").hidden=true});
-if("serviceWorker"in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js"));
+if("serviceWorker"in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
 render();
+}
+document.addEventListener("DOMContentLoaded",init);
