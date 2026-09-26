@@ -136,7 +136,8 @@ $("list").onclick=e=>{const b=e.target.closest("[data-action]");if(!b)return;con
  if(b.dataset.action==="delete"){lastDeleted={...item};items=items.filter(i=>i.id!==id);save();render();toast("Item excluído.",true)}
 };
 $("list").oninput=e=>{const b=e.target.closest("[data-action]");if(!b)return;
- if(b.dataset.action==="price-input"||b.dataset.action==="qty-input")b.dataset.draft=b.value;
+ if(b.dataset.action==="price-input")updateItemField(b.dataset.id,"price",b.value);
+ if(b.dataset.action==="qty-input")updateItemField(b.dataset.id,"quantity",b.value);
 };
 $("list").onfocusout=e=>{const b=e.target.closest("[data-action]");if(!b)return;
  if(b.dataset.action==="price-input")updateItemField(b.dataset.id,"price",b.value);
