@@ -2,6 +2,7 @@ package com.andermuchael.marketlist
 
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
+import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.createSupabaseClient
 
 object MarketlistSupabase {
@@ -14,6 +15,7 @@ object MarketlistSupabase {
             supabaseUrl = SUPABASE_URL,
             supabaseKey = publishableKey
         ) {
+            install(Postgrest)
             install(Auth) {
                 alwaysAutoRefresh = true
                 autoLoadFromStorage = true
