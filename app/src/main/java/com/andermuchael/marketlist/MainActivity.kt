@@ -18,6 +18,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -238,144 +240,178 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MarketlistApp(vm: MarketViewModel = viewModel()) {
     var categoryMenuOpen by remember { mutableStateOf(false) }
+    var showAddSheet by remember { mutableStateOf(false) }
+    var showBudget by remember { mutableStateOf(false) }
     var budgetText by remember(vm.budget) { mutableStateOf(if (vm.budget == 0.0) "" else vm.budget.toString()) }
-    var categoryFilter by remember { mutableStateOf("Todas") }
+    var currentFilter by remember { mutableStateOf("Todos") }
 
-    MaterialTheme(colorScheme = lightColorScheme(
-        primary = Color(0xFF2563EB),
-        secondary = Color(0xFF10B981),
-        background = Color(0xFFF6F8FC),
-        surface = Color.White
-    )) {
+    MaterialTheme(
+        colorScheme = lightColorScheme(
+            primary = Color(0xFF2563EB),
+            secondary = Color(0xFF10B981),
+            background = Color(0xFFF6F8FC),
+            surface = Color.White
+        )
+    ) {
         Scaffold(
             topBar = {
                 TopAppBar(
                     title = {
                         Column {
                             Text("Marketlist", style = MaterialTheme.typography.titleLarge)
-                            Text("Sua lista de compras", style = MaterialTheme.typography.labelMedium)
+                            Text(
+                                if (vm.items.isEmpty()) "Sua lista está pronta para começar"
+                                else "${vm.pending} pendentes • ${vm.bought} comprados",
+                                style = MaterialTheme.typography.labelMedium
+                            )
                         }
                     },
                     actions = {
                         IconButton(onClick = { vm.showHistory = true }) {
-                            Icon(Icons.Default.History, "Histórico")
+                            Icon(Icons.Default.History, "Histórico de compras")
                         }
                     }
+                )
+            },
+            floatingActionButton = {
+                ExtendedFloatingActionButton(
+                    onClick = { showAddSheet = true },
+                    icon = { Icon(Icons.Default.Add, null) },
+                    text = { Text("Novo produto") },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = Color.White
                 )
             }
         ) { padding ->
             val visible = vm.items.filter {
                 it.name.contains(vm.search, ignoreCase = true) &&
-                    (categoryFilter == "Todas" || it.category == categoryFilter)
+                    when (currentFilter) {
+                        "Pendentes" -> !it.bought
+                        "Comprados" -> it.bought
+                        else -> true
+                    }
             }
 
-            Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)) {
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(horizontal = 16.dp)
+            ) {
+                // Resumo compacto: não ocupa a área principal da lista.
                 Card(
                     Modifier.fillMaxWidth(),
-                    RoundedCornerShape(22.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary)
+                    RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
                 ) {
-                    Column(Modifier.padding(18.dp)) {
-                        Text("TOTAL DA LISTA", color = Color.White.copy(alpha = .75f))
-                        Text(money(vm.total), style = MaterialTheme.typography.headlineMedium, color = Color.White)
-                        Spacer(Modifier.height(8.dp))
-                        Text("${vm.pending} pendentes  •  ${vm.bought} comprados", color = Color.White)
-                        if (vm.budget > 0) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("TOTAL", color = Color.White.copy(alpha = .72f), style = MaterialTheme.typography.labelSmall)
                             Text(
-                                if (vm.remainingBudget >= 0) "Restante: ${money(vm.remainingBudget)}"
-                                else "Acima do orçamento: ${money(-vm.remainingBudget)}",
-                                color = if (vm.remainingBudget >= 0) Color.White else Color(0xFFFFD6D6)
+                                money(vm.total),
+                                color = Color.White,
+                                style = MaterialTheme.typography.titleLarge
+                            )
+                        }
+                        VerticalDivider(
+                            modifier = Modifier.height(34.dp),
+                            color = Color.White.copy(alpha = .25f)
+                        )
+                        Column(
+                            Modifier
+                                .padding(horizontal = 14.dp)
+                                .clickable { showBudget = true },
+                            horizontalAlignment = Alignment.End
+                        ) {
+                            Text("ORÇAMENTO", color = Color.White.copy(alpha = .72f), style = MaterialTheme.typography.labelSmall)
+                            Text(
+                                if (vm.budget > 0) money(vm.budget) else "Definir",
+                                color = Color.White,
+                                style = MaterialTheme.typography.titleSmall
                             )
                         }
                     }
                 }
 
-                Spacer(Modifier.height(8.dp))
-
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.secondaryContainer,
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(
-                        "A lista é salva automaticamente. No mercado, marque apenas o que comprou. Os pendentes nunca somem.",
-                        modifier = Modifier.padding(12.dp),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    OutlinedTextField(
-                        value = budgetText, onValueChange = { budgetText = it },
-                        modifier = Modifier.weight(1f), label = { Text("Orçamento") },
-                        placeholder = { Text("R$ 300") }, singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
-                    )
-                    Button(onClick = { vm.setBudget(budgetText) }, modifier = Modifier.align(Alignment.CenterVertically)) {
-                        Text("Salvar orçamento")
-                    }
-                }
-
-                Spacer(Modifier.height(8.dp))
-
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-                    OutlinedTextField(
-                        value = vm.quickName, onValueChange = { vm.quickName = it },
-                        modifier = Modifier.weight(1f), placeholder = { Text("Adicionar produto à lista") },
-                        singleLine = true
-                    )
-                    Box {
-                        OutlinedButton(onClick = { categoryMenuOpen = true }) { Text(vm.quickCategory.take(10)) }
-                        DropdownMenu(expanded = categoryMenuOpen, onDismissRequest = { categoryMenuOpen = false }) {
-                            vm.categories().forEach { category ->
-                                DropdownMenuItem(
-                                    text = { Text(category) },
-                                    onClick = { vm.quickCategory = category; categoryMenuOpen = false }
-                                )
-                            }
-                        }
-                    }
-                    IconButton(onClick = vm::addQuickItem, enabled = vm.quickName.trim().isNotEmpty()) {
-                        Icon(Icons.Default.Add, "Adicionar")
-                    }
-                }
-
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(10.dp))
 
                 OutlinedTextField(
-                    value = vm.search, onValueChange = { vm.search = it },
-                    modifier = Modifier.fillMaxWidth(), placeholder = { Text("Buscar item...") },
-                    singleLine = true
+                    value = vm.search,
+                    onValueChange = { vm.search = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Buscar na lista") },
+                    leadingIcon = { Icon(Icons.Default.Search, null) },
+                    trailingIcon = {
+                        if (vm.search.isNotEmpty()) {
+                            IconButton(onClick = { vm.search = "" }) {
+                                Icon(Icons.Default.Close, "Limpar busca")
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(14.dp)
                 )
 
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    FilterChip(selected = categoryFilter == "Todas", onClick = { categoryFilter = "Todas" }, label = { Text("Todos") })
-                    vm.categories().filter { category -> vm.items.any { it.category == category } }.forEach { category ->
-                        FilterChip(selected = categoryFilter == category, onClick = { categoryFilter = category }, label = { Text(category) })
-                    }
-                }
+                Spacer(Modifier.height(7.dp))
 
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = vm::clearBought, enabled = vm.bought > 0) { Text("Excluir comprados") }
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    listOf("Todos", "Pendentes", "Comprados").forEach { filter ->
+                        FilterChip(
+                            selected = currentFilter == filter,
+                            onClick = { currentFilter = filter },
+                            label = { Text(filter) }
+                        )
+                    }
+                    Spacer(Modifier.weight(1f))
+                    if (vm.bought > 0) {
+                        TextButton(onClick = vm::clearBought) {
+                            Text("Limpar")
+                        }
+                    }
                 }
 
                 if (visible.isEmpty()) {
-                    Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Box(
+                        Modifier.weight(1f).fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.ShoppingCart, null, Modifier.size(54.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = .5f))
-                            Text("Sua lista está vazia", style = MaterialTheme.typography.titleLarge)
-                            Text("Adicione os produtos acima.")
+                            Icon(
+                                Icons.Default.ShoppingCart,
+                                null,
+                                Modifier.size(52.dp),
+                                tint = MaterialTheme.colorScheme.primary.copy(alpha = .45f)
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                if (vm.items.isEmpty()) "Sua lista está vazia" else "Nenhum item encontrado",
+                                style = MaterialTheme.typography.titleLarge
+                            )
+                            Text(
+                                if (vm.items.isEmpty()) "Toque em + para adicionar seu primeiro produto."
+                                else "Tente outra busca ou filtro."
+                            )
                         }
                     }
                 } else {
                     LazyColumn(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(9.dp),
-                        contentPadding = PaddingValues(top = 4.dp, bottom = 10.dp)
+                        contentPadding = PaddingValues(top = 5.dp, bottom = 96.dp)
                     ) {
                         items(visible, key = { it.id }) { item ->
                             Card(
-                                Modifier.fillMaxWidth().alpha(if (item.bought) .65f else 1f),
+                                Modifier
+                                    .fillMaxWidth()
+                                    .alpha(if (item.bought) .62f else 1f),
                                 RoundedCornerShape(18.dp)
                             ) {
                                 Column(Modifier.padding(12.dp)) {
@@ -407,13 +443,13 @@ fun MarketlistApp(vm: MarketViewModel = viewModel()) {
                                         }
                                         Text(
                                             if (item.quantity % 1.0 == 0.0) item.quantity.toInt().toString() else item.quantity.toString(),
-                                            modifier = Modifier.widthIn(min = 32.dp),
+                                            modifier = Modifier.widthIn(min = 30.dp),
                                             style = MaterialTheme.typography.titleMedium
                                         )
                                         IconButton(onClick = { vm.changeQuantity(item.id, 1.0) }) {
                                             Icon(Icons.Default.Add, "Aumentar quantidade")
                                         }
-                                        Spacer(Modifier.width(8.dp))
+                                        Spacer(Modifier.width(6.dp))
                                         OutlinedTextField(
                                             value = if (item.price == 0.0) "" else item.price.toString(),
                                             onValueChange = { vm.updatePrice(item.id, it) },
@@ -421,7 +457,8 @@ fun MarketlistApp(vm: MarketViewModel = viewModel()) {
                                             label = { Text("Preço no mercado") },
                                             prefix = { Text("R$ ") },
                                             singleLine = true,
-                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                            shape = RoundedCornerShape(12.dp)
                                         )
                                     }
                                 }
@@ -429,41 +466,150 @@ fun MarketlistApp(vm: MarketViewModel = viewModel()) {
                         }
                     }
                 }
+            }
+        }
 
-                if (vm.bought > 0) {
-                    Button(onClick = vm::archiveBought, modifier = Modifier.fillMaxWidth()) {
-                        Text("✓ Arquivar ${vm.bought} comprado(s)")
-                    }
-                } else if (vm.items.isNotEmpty()) {
-                    OutlinedButton(
-                        onClick = { },
-                        enabled = false,
-                        modifier = Modifier.fillMaxWidth()
+        if (showAddSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showAddSheet = false }
+            ) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .padding(bottom = 28.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text("Novo produto", style = MaterialTheme.typography.headlineSmall)
+                    Text(
+                        "Monte sua lista agora. O preço pode ser informado depois, no mercado.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedTextField(
+                        value = vm.quickName,
+                        onValueChange = { vm.quickName = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Produto") },
+                        placeholder = { Text("Ex.: Arroz 5 kg") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(14.dp)
+                    )
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text("Marque os itens comprados para arquivar")
+                        Box(Modifier.weight(1f)) {
+                            OutlinedButton(
+                                onClick = { categoryMenuOpen = true },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(vm.quickCategory)
+                            }
+                            DropdownMenu(
+                                expanded = categoryMenuOpen,
+                                onDismissRequest = { categoryMenuOpen = false }
+                            ) {
+                                vm.categories().forEach { category ->
+                                    DropdownMenuItem(
+                                        text = { Text(category) },
+                                        onClick = {
+                                            vm.quickCategory = category
+                                            categoryMenuOpen = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                        Button(
+                            onClick = {
+                                vm.addQuickItem()
+                                showAddSheet = false
+                            },
+                            enabled = vm.quickName.trim().isNotEmpty(),
+                            modifier = Modifier.height(52.dp)
+                        ) {
+                            Icon(Icons.Default.Add, null)
+                            Spacer(Modifier.width(6.dp))
+                            Text("Adicionar")
+                        }
                     }
                 }
             }
         }
 
+        if (showBudget) {
+            AlertDialog(
+                onDismissRequest = { showBudget = false },
+                title = { Text("Orçamento da compra") },
+                text = {
+                    OutlinedTextField(
+                        value = budgetText,
+                        onValueChange = { budgetText = it },
+                        label = { Text("Valor máximo") },
+                        prefix = { Text("R$ ") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    )
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        vm.setBudget(budgetText)
+                        showBudget = false
+                    }) { Text("Salvar") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showBudget = false }) { Text("Cancelar") }
+                }
+            )
+        }
+
         if (vm.showHistory) {
             AlertDialog(
                 onDismissRequest = { vm.showHistory = false },
-                title = { Text("Histórico de compras") },
+                title = {
+                    Column {
+                        Text("Histórico de compras")
+                        Text(
+                            "Compras arquivadas com itens, quantidades e valores.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                },
                 text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (vm.history.isEmpty()) Text("Nenhuma compra salva.")
-                        else vm.history.take(8).forEach { h ->
-                            Card {
-                                Column(Modifier.padding(10.dp)) {
-                                    Text(h.date, style = MaterialTheme.typography.titleSmall)
-                                    Text("${money(h.total)} • ${h.count} item(ns)")
+                    if (vm.history.isEmpty()) {
+                        Text("Nenhuma compra arquivada ainda.")
+                    } else {
+                        Column(
+                            Modifier.heightIn(max = 430.dp).verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            vm.history.take(10).forEach { h ->
+                                Card {
+                                    Column(Modifier.padding(12.dp)) {
+                                        Row(
+                                            Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(h.date, style = MaterialTheme.typography.titleSmall)
+                                            Text(money(h.total), style = MaterialTheme.typography.titleMedium)
+                                        }
+                                        Text("${h.count} item(ns)", style = MaterialTheme.typography.labelMedium)
+                                        h.items.forEach { item ->
+                                            Text(
+                                                "• ${item.name} — ${formatQuantity(item.quantity)} x ${money(item.price)} = ${money(item.total)}",
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                 },
-                confirmButton = { TextButton(onClick = { vm.showHistory = false }) { Text("Fechar") } },
+                confirmButton = {
+                    TextButton(onClick = { vm.showHistory = false }) { Text("Fechar") }
+                },
                 dismissButton = {
                     if (vm.history.isNotEmpty()) TextButton(onClick = vm::clearHistory) { Text("Apagar histórico") }
                 }
@@ -471,7 +617,6 @@ fun MarketlistApp(vm: MarketViewModel = viewModel()) {
         }
     }
 }
-
 
 private fun formatQuantity(value: Double): String =
     if (value % 1.0 == 0.0) value.toInt().toString() else value.toString()
