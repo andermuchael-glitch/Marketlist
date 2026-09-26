@@ -5,12 +5,13 @@ import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.createSupabaseClient
 
 object MarketlistSupabase {
-    const val CONFIG_URL = "https://muchael-glitch.github.io/Marketlist/supabase-config.js"
+    const val SUPABASE_URL = "https://rijjtwpahpxzjpbkovff.supabase.co"
+    const val PUBLISHABLE_KEY = "sb_publishable_5Ykbh2xHarsAHFzFQlmeVw_DibhKkDE"
     const val SITE_URL = "https://muchael-glitch.github.io/Marketlist/"
 
     fun createClient(publishableKey: String): SupabaseClient =
         createSupabaseClient(
-            supabaseUrl = "https://rijjtwpahpxzjpbkovff.supabase.co",
+            supabaseUrl = SUPABASE_URL,
             supabaseKey = publishableKey
         ) {
             install(Auth) {
