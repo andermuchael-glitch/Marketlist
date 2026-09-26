@@ -1,0 +1,12 @@
+{
+  "name":"Marketlist — Lista de Compras",
+  "short_name":"Marketlist",
+  "start_url":"./",
+  "scope":"./",
+  "display":"standalone",
+  "background_color":"#f5f7fb",
+  "theme_color":"#2563eb",
+  "description":"Lista de compras com preço, quantidade e total automático.",
+  "icons":[{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}],
+  "lang":"pt-BR"
+}
