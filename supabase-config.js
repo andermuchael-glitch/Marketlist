@@ -3,5 +3,5 @@
 // NUNCA coloque uma secret/service_role key aqui.
 window.MARKETLIST_SUPABASE = {
   url: "https://rijjtwpahpxzjpbkovff.supabase.co",
-  key: ""
+  key: ""sb_publishable_5Ykbh2xHarsAHFzFQlmeVw_DibhKkDE
 };
