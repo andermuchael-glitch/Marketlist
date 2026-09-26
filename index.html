@@ -11,6 +11,26 @@
   <title>Marketlist</title>
 </head>
 <body>
+  <section id="authScreen" class="auth-screen" hidden>
+    <div class="auth-glow"></div>
+    <div class="auth-brand">
+      <img src="logo.svg" alt="Marketlist">
+      <h1>Market<span>list</span></h1>
+      <p>Sua lista de compras<br>mais simples e inteligente</p>
+    </div>
+    <form id="loginForm" class="auth-card">
+      <div class="auth-heading"><h2>Bem-vindo</h2><p>Entre para salvar sua lista com segurança.</p></div>
+      <label>E-mail<input id="loginEmail" type="email" autocomplete="email" placeholder="seu@email.com" required></label>
+      <label>Senha<div class="password-field"><input id="loginPassword" type="password" autocomplete="current-password" placeholder="Sua senha" required><button type="button" id="togglePassword" aria-label="Mostrar senha">◉</button></div></label>
+      <button class="auth-primary" type="submit" id="loginSubmit">Entrar</button>
+      <button class="auth-link" type="button" id="forgotPassword">Esqueci minha senha</button>
+      <div class="auth-divider"><span>ou</span></div>
+      <button class="auth-secondary" type="button" id="signupBtn">Criar minha conta</button>
+      <button class="auth-offline" type="button" id="offlineBtn">Continuar sem login</button>
+      <p id="authMessage" class="auth-message" role="alert"></p>
+    </form>
+    <small class="auth-footer">Seus dados ficam protegidos e sua sessão permanece conectada.</small>
+  </section>
   <main class="app-shell">
     <header class="topbar">
       <div class="brand">
@@ -113,6 +133,8 @@
       <p class="backup-note">O backup inclui produtos, quantidades, preços, orçamento e histórico. A restauração substitui os dados atuais por aqueles do arquivo.</p>
     </form>
   </dialog>
-  <script src="app.js?v=20260926-8"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="app.js?v=20260926-9"></script>
 </body>
 </html>
