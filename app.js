@@ -110,7 +110,7 @@ function restoreBackup(file){const reader=new FileReader();reader.onload=()=>{tr
 $("backupBtn").onclick=()=>$("backupDialog").showModal();$("closeBackup").onclick=()=>$("backupDialog").close();$("downloadBackup").onclick=downloadBackup;$("restoreBackup").onclick=()=>$("backupFile").click();$("backupFile").onchange=e=>{const file=e.target.files?.[0];if(file)restoreBackup(file);e.target.value="";};
 $("closeDialog").onclick=closeDialog;$("cancelDialog").onclick=closeDialog;
 $("price").oninput=updatePreview;$("quantity").oninput=updatePreview;$("search").oninput=render;
-$("saveBudget").onclick=()=>{budget=Math.max(0,Number($("budgetInput").value)||0);saveBudget();updateBudgetUI();toast(budget?"Orçamento salvo.":"Orçamento removido.")};
+$("saveBudget").onclick=()=>{budget=Math.max(0,parseDecimal($("budgetInput").value));saveBudget();updateBudgetUI();toast(budget?"Orçamento salvo.":"Orçamento removido.")};
 $("budgetBtn").onclick=()=>{
   $("budgetEdit").value=budget||"";
   $("budgetDialog").showModal();
@@ -118,7 +118,7 @@ $("budgetBtn").onclick=()=>{
 $("closeBudget").onclick=()=>$("budgetDialog").close();
 $("saveBudgetDialog").onclick=(e)=>{
   e.preventDefault();
-  budget=Math.max(0,Number($("budgetEdit").value)||0);
+  budget=Math.max(0,parseDecimal($("budgetEdit").value));
   saveBudget();updateBudgetUI();$("budgetDialog").close();
   toast(budget?"Orçamento salvo.":"Orçamento removido.");
 };
