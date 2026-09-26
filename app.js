@@ -37,7 +37,11 @@ function updateItemField(id,field,value){
  const item=items.find(i=>i.id===id); if(!item)return;
  if(field==="price") item.price=Math.max(0,Number(value)||0);
  if(field==="quantity") item.quantity=Math.max(0.01,Number(value)||0.01);
- save(); render();
+ save();
+ const totalEl=document.querySelector('[data-total-id="'+id+'"]');
+ if(totalEl) totalEl.textContent=money(itemTotal(item));
+ $("grandTotal").textContent=money(total());
+ updateBudgetUI();
 }
 function changeQuantity(id,delta){
  const item=items.find(i=>i.id===id); if(!item)return;
@@ -67,7 +71,7 @@ function render(){
  <div class="item-main">
    <div class="item-head">
      <div><div class="name">${escapeHtml(i.name)}</div><div class="meta">${escapeHtml(i.category||"Outros")}</div></div>
-     <div class="item-total">${money(itemTotal(i))}</div>
+     <div class="item-total" data-total-id="${i.id}">${money(itemTotal(i))}</div>
    </div>
    <div class="market-controls">
      <div class="qty-control" aria-label="Quantidade">
