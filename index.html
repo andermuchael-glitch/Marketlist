@@ -37,6 +37,14 @@
       <div><span>Comprados</span><strong id="boughtCount">0</strong></div>
     </section>
 
+    <section class="budget-row" aria-live="polite">
+      <div class="budget-card">
+        <span>ORÇAMENTO</span>
+        <strong id="budgetValue">Não definido</strong>
+      </div>
+      <p id="budgetStatus" class="budget-status">Defina um orçamento para acompanhar quanto ainda pode gastar.</p>
+    </section>
+
     <section class="toolbar">
       <div class="search-box">
         <span>⌕</span>
@@ -68,7 +76,7 @@
   </main>
 
     <dialog id="itemDialog">
-    <form id="itemForm" method="dialog" class="dialog-card">
+    <form id="itemForm" class="dialog-card">
       <div class="dialog-head">
         <h2 id="dialogTitle">Adicionar item</h2>
         <button type="button" id="closeDialog" class="close">×</button>
@@ -115,6 +123,6 @@
       <p class="backup-note">O backup inclui produtos, quantidades, preços, orçamento e histórico. A restauração substitui os dados atuais por aqueles do arquivo.</p>
     </form>
   </dialog>
-  <script src="app.js?v=20260926-4"></script>
+  <script src="app.js?v=20260926-5"></script>
 </body>
 </html>
