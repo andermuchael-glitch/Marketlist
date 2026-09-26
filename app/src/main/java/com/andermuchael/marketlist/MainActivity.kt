@@ -728,7 +728,7 @@ private fun AuthScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MarketlistApp(client: SupabaseClient, vm: MarketViewModel = viewModel()) {
+fun MarketlistApp(client: SupabaseClient? = null, vm: MarketViewModel = viewModel()) {
     var categoryMenuOpen by remember { mutableStateOf(false) }
     var showAddSheet by remember { mutableStateOf(false) }
     var showBudget by remember { mutableStateOf(false) }
@@ -738,11 +738,12 @@ fun MarketlistApp(client: SupabaseClient, vm: MarketViewModel = viewModel()) {
     var cloudInitialized by remember(client) { mutableStateOf(false) }
 
     LaunchedEffect(client) {
+        if (client == null) return@LaunchedEffect
         vm.syncInitial(client)
         cloudInitialized = true
     }
-    LaunchedEffect(vm.cloudRevision, cloudInitialized) {
-        if (!cloudInitialized) return@LaunchedEffect
+    LaunchedEffect(vm.cloudRevision, cloudInitialized, client) {
+        if (!cloudInitialized || client == null) return@LaunchedEffect
         kotlinx.coroutines.delay(700)
         vm.syncToCloud(client)
     }
