@@ -21,28 +21,14 @@
     </header>
 
     <section class="summary">
-      <div><span>Orçamento</span><strong id="budgetValue">R$ 0,00</strong></div>
-      <div><span>Total</span><strong id="grandTotal">R$ 0,00</strong></div>
+      <div><span>Total da lista</span><strong id="grandTotal">R$ 0,00</strong></div>
       <div><span>Pendentes</span><strong id="pendingCount">0</strong></div>
       <div><span>Comprados</span><strong id="boughtCount">0</strong></div>
     </section>
 
-    <section class="quick-add" aria-label="Adicionar produto">
-      <input id="quickName" maxlength="80" placeholder="O que você precisa comprar?" autocomplete="off">
-      <select id="quickCategory" aria-label="Categoria">
-        <option>Outros</option><option>Hortifruti</option><option>Carnes</option><option>Laticínios</option><option>Padaria</option><option>Limpeza</option><option>Bebidas</option><option>Higiene</option><option>Mercearia</option>
-      </select>
-      <button id="quickAddBtn" class="primary">Adicionar</button>
-    </section>
-
-    <section class="budget-row">
-      <input id="budgetInput" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Definir orçamento">
-      <button id="saveBudget" class="secondary">Salvar orçamento</button>
-    </section>
-    <section id="budgetStatus" class="budget-status">Defina um orçamento para acompanhar quanto ainda pode gastar.</section>
     <section class="toolbar">
-      <input id="search" type="search" placeholder="Buscar item..." autocomplete="off">
-      <button id="clearBought" class="secondary">Limpar comprados</button>
+      <input id="search" type="search" placeholder="Buscar na lista..." autocomplete="off">
+      <button id="clearBought" class="secondary">Limpar</button>
       <button id="historyBtn" class="secondary">Histórico</button>
     </section>
     <nav class="filters" aria-label="Filtro da lista">
@@ -59,7 +45,8 @@
 
     <section id="categoryFilters" class="filters category-filters" aria-label="Categorias"></section>
     <section id="list" class="list" aria-live="polite"></section>
-    <section class="finish-row"><button id="finishShopping" class="primary">✓ Finalizar e salvar compra</button></section>
+    <section class="finish-row"><button id="finishShopping" class="primary">✓ Arquivar comprados</button></section>
+    <button id="fabAdd" class="fab" aria-label="Adicionar novo produto" title="Novo produto">+</button>
   <dialog id="historyDialog"><div class="history-card">
       <div class="dialog-head"><h2>Histórico de compras</h2><button type="button" id="closeHistory" class="close">×</button></div>
       <div id="historyList" class="history-list"></div>
@@ -74,27 +61,32 @@
         <button type="button" id="closeDialog" class="close">×</button>
       </div>
       <label>Produto
-        <input id="name" required maxlength="80" placeholder="Ex.: Arroz">
+        <input id="name" required maxlength="80" placeholder="Ex.: Arroz 5 kg">
       </label>
       <label>Categoria
         <select id="category">
           <option>Outros</option><option>Hortifruti</option><option>Carnes</option><option>Laticínios</option><option>Padaria</option><option>Limpeza</option><option>Bebidas</option><option>Higiene</option><option>Mercearia</option>
         </select>
       </label>
-      <div class="two-cols">
-        <label>Preço unitário
-          <input id="price" required inputmode="decimal" type="number" min="0" step="0.01" placeholder="0,00">
-        </label>
-        <label>Quantidade
-          <input id="quantity" required inputmode="decimal" type="number" min="0.01" step="0.01" value="1">
-        </label>
-      </div>
-      <div class="preview">Total do item: <strong id="itemPreview">R$ 0,00</strong></div>
+      <label>Quantidade planejada
+        <input id="quantity" required inputmode="decimal" type="number" min="0.01" step="0.01" value="1">
+      </label>
+      <input id="price" type="hidden" value="0">
+      <div class="preview">O preço pode ser informado depois, no mercado.</div>
       <button class="primary" type="submit" id="submitItem">Adicionar à lista</button>
       <button type="button" id="cancelDialog" class="secondary dialog-cancel">Cancelar</button>
     </form>
   </dialog>
 
+  <dialog id="budgetDialog">
+    <form method="dialog" class="dialog-card compact-dialog">
+      <div class="dialog-head"><h2>Orçamento</h2><button type="button" id="closeBudget" class="close">×</button></div>
+      <label>Quanto pretende gastar?
+        <input id="budgetEdit" type="number" min="0" step="0.01" inputmode="decimal" placeholder="R$ 300">
+      </label>
+      <button class="primary" id="saveBudgetDialog" type="submit">Salvar orçamento</button>
+    </form>
+  </dialog>
   <script src="app.js"></script>
 </body>
 </html>
