@@ -99,11 +99,22 @@ function renderHistory(){
  if(!history.length){box.innerHTML='<div class="empty"><div class="empty-icon">🧾</div><h2>Nenhuma compra salva</h2><p>Finalize uma compra para ela aparecer aqui.</p></div>';return}
  box.innerHTML=history.map(h=>`<article class="history-entry"><strong>${escapeHtml(h.date)} — ${money(h.total)}</strong><small>${h.count} item(ns)</small><div class="history-items">${h.items.map(i=>escapeHtml(i.name)+ " ("+money(itemTotal(i))+")").join(" · ")}</div></article>`).join("");
 }
-$("quickAddBtn").onclick=addQuickItem;
-$("quickName").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();addQuickItem()}};
+
 $("closeDialog").onclick=closeDialog;$("cancelDialog").onclick=closeDialog;
 $("price").oninput=updatePreview;$("quantity").oninput=updatePreview;$("search").oninput=render;
 $("saveBudget").onclick=()=>{budget=Math.max(0,Number($("budgetInput").value)||0);saveBudget();updateBudgetUI();toast(budget?"Orçamento salvo.":"Orçamento removido.")};
+$("budgetBtn").onclick=()=>{
+  $("budgetEdit").value=budget||"";
+  $("budgetDialog").showModal();
+};
+$("closeBudget").onclick=()=>$("budgetDialog").close();
+$("saveBudgetDialog").onclick=(e)=>{
+  e.preventDefault();
+  budget=Math.max(0,Number($("budgetEdit").value)||0);
+  saveBudget();updateBudgetUI();$("budgetDialog").close();
+  toast(budget?"Orçamento salvo.":"Orçamento removido.");
+};
+$("fabAdd").onclick=()=>openDialog();
 document.querySelectorAll("[data-filter]").forEach(b=>b.onclick=()=>{currentFilter=b.dataset.filter;render()});
 $("clearBought").onclick=()=>{const count=items.filter(i=>i.bought).length;if(!count){toast("Não há itens comprados para limpar.");return}items=items.filter(i=>!i.bought);save();render();toast(`${count} item(ns) comprado(s) removido(s).`)};
 $("list").onclick=e=>{const b=e.target.closest("[data-action]");if(!b)return;const id=b.dataset.id,item=items.find(i=>i.id===id);if(!item)return;
