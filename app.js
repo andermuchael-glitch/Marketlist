@@ -23,12 +23,15 @@ function toast(message,undo=false){
  if(undo)$("undoDelete").onclick=()=>{if(lastDeleted){items.unshift(lastDeleted);lastDeleted=null;save();render();el.classList.remove("show")}};
 }
 function updateBudgetUI(){
- $("budgetValue").textContent=money(budget);
- $("budgetInput").value=budget||"";
- const diff=budget-total(), status=$("budgetStatus");
- if(!budget){status.textContent="Defina um orçamento para acompanhar quanto ainda pode gastar.";status.className="budget-status"}
- else if(diff>=0){status.textContent=`Você ainda pode gastar ${money(diff)}.`;status.className="budget-status"}
- else{status.textContent=`Orçamento ultrapassado em ${money(Math.abs(diff))}.`;status.className="budget-status over"}
+ const budgetValue=$("budgetValue"),budgetInput=$("budgetInput"),status=$("budgetStatus");
+ if(budgetValue)budgetValue.textContent=money(budget);
+ if(budgetInput)budgetInput.value=budget||"";
+ if(status){
+  const diff=budget-total();
+  if(!budget){status.textContent="Defina um orçamento para acompanhar quanto ainda pode gastar.";status.className="budget-status"}
+  else if(diff>=0){status.textContent=`Você ainda pode gastar ${money(diff)}.`;status.className="budget-status"}
+  else{status.textContent=`Orçamento ultrapassado em ${money(Math.abs(diff))}.`;status.className="budget-status over"}
+ }
 }
 function renderCategories(){
  const cats=[...new Set(items.map(i=>i.category||"Outros"))].sort();
@@ -92,7 +95,7 @@ function render(){
  document.querySelectorAll(".filter").forEach(b=>{if(b.dataset.filter)b.classList.toggle("active",b.dataset.filter===currentFilter)});
  renderCategories();updateBudgetUI();
 }
-function updatePreview(){$("itemPreview").textContent=money((Number($("price").value)||0)*(Number($("quantity").value)||0))}
+function updatePreview(){const preview=$("itemPreview");if(preview)preview.textContent=money((parseDecimal($("price").value)||0)*(parseDecimal($("quantity").value)||0))}
 function openDialog(item=null){
  editingId=item?.id||null;$("itemForm").reset();$("quantity").value=item?.quantity??1;$("name").value=item?.name??"";$("price").value=item?.price??"";
  $("category").value=item?.category||"Outros";$("dialogTitle").textContent=item?"Editar item":"Adicionar item";$("submitItem").textContent=item?"Salvar alterações":"Adicionar à lista";updatePreview();$("itemDialog").showModal();setTimeout(()=>$("name").focus(),50);
@@ -110,16 +113,17 @@ function restoreBackup(file){const reader=new FileReader();reader.onload=()=>{tr
 $("backupBtn").onclick=()=>$("backupDialog").showModal();$("closeBackup").onclick=()=>$("backupDialog").close();$("downloadBackup").onclick=downloadBackup;$("restoreBackup").onclick=()=>$("backupFile").click();$("backupFile").onchange=e=>{const file=e.target.files?.[0];if(file)restoreBackup(file);e.target.value="";};
 $("closeDialog").onclick=closeDialog;$("cancelDialog").onclick=closeDialog;
 $("price").oninput=updatePreview;$("quantity").oninput=updatePreview;$("search").oninput=render;
-$("saveBudget").onclick=()=>{budget=Math.max(0,parseDecimal($("budgetInput").value));saveBudget();updateBudgetUI();toast(budget?"Orçamento salvo.":"Orçamento removido.")};
-$("budgetBtn").onclick=()=>{
-  $("budgetEdit").value=budget||"";
-  $("budgetDialog").showModal();
+const budgetBtn=$("budgetBtn"),budgetDialog=$("budgetDialog"),closeBudget=$("closeBudget"),saveBudgetDialog=$("saveBudgetDialog");
+if(budgetBtn&&budgetDialog)budgetBtn.onclick=()=>{
+  const edit=$("budgetEdit");if(edit)edit.value=budget||"";
+  budgetDialog.showModal();
 };
-$("closeBudget").onclick=()=>$("budgetDialog").close();
-$("saveBudgetDialog").onclick=(e)=>{
+if(closeBudget&&budgetDialog)closeBudget.onclick=()=>budgetDialog.close();
+if(saveBudgetDialog&&budgetDialog)saveBudgetDialog.onclick=e=>{
   e.preventDefault();
-  budget=Math.max(0,parseDecimal($("budgetEdit").value));
-  saveBudget();updateBudgetUI();$("budgetDialog").close();
+  const edit=$("budgetEdit");
+  budget=Math.max(0,parseDecimal(edit?.value));
+  saveBudget();updateBudgetUI();budgetDialog.close();
   toast(budget?"Orçamento salvo.":"Orçamento removido.");
 };
 $("fabAdd").onclick=()=>openDialog();
