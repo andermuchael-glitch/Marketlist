@@ -312,7 +312,7 @@ fun MarketlistApp(vm: MarketViewModel = viewModel()) {
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                     )
                     Button(onClick = { vm.setBudget(budgetText) }, modifier = Modifier.align(Alignment.CenterVertically)) {
-                        Text("Salvar")
+                        Text("Salvar orçamento")
                     }
                 }
 
