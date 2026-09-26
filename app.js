@@ -141,9 +141,19 @@ $("list").onfocusout=e=>{const b=e.target.closest("[data-action]");if(!b)return;
 $("list").onkeydown=e=>{const b=e.target.closest("[data-action]");if(!b)return;
  if((b.dataset.action==="price-input"||b.dataset.action==="qty-input")&&e.key==="Enter"){e.preventDefault();b.blur();}
 };
-$("itemForm").onsubmit=e=>{e.preventDefault();const name=$("name").value.trim(),price=Number($("price").value),quantity=Number($("quantity").value),category=$("category").value;if(!name||price<0||quantity<=0)return;
- if(editingId)items=items.map(i=>i.id===editingId?{...i,name,price,quantity,category}:i);else items.unshift({id:crypto.randomUUID?crypto.randomUUID():Date.now().toString(),name,price,quantity,category,bought:false});
- save();render();closeDialog();toast(editingId?"Item atualizado.":"Item adicionado.");
+$("itemForm").onsubmit=e=>{
+ e.preventDefault();
+ const name=$("name").value.trim();
+ const priceText=$("price").value.trim();
+ const quantityText=$("quantity").value.trim();
+ const price=priceText?parseDecimal(priceText):0;
+ const quantity=quantityText?parseDecimal(quantityText):1;
+ const category=$("category").value||"Outros";
+ if(!name||price<0||quantity<=0){toast("Informe pelo menos o nome e uma quantidade válida.");return;}
+ const id=editingId||(crypto.randomUUID?crypto.randomUUID():Date.now().toString());
+ if(editingId)items=items.map(i=>i.id===editingId?{...i,name,price,quantity,category}:i);
+ else items.unshift({id,name,price,quantity,category,bought:false});
+ save();render();closeDialog();toast(editingId?"Item atualizado e salvo.":"Item adicionado e salvo na lista.");
 };
 $("historyBtn").onclick=()=>{$("historyDialog").showModal();renderHistory()};$("closeHistory").onclick=()=>$("historyDialog").close();
 $("clearHistory").onclick=()=>{if(confirm("Apagar todo o histórico de compras?")){history=[];saveHistory();renderHistory();toast("Histórico apagado.")}};
