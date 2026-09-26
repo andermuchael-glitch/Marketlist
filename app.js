@@ -64,6 +64,7 @@ function render(){
  $("pendingCount").textContent=items.filter(i=>!i.bought).length;
  $("boughtCount").textContent=items.filter(i=>i.bought).length;
  $("emptyState").hidden=visible.length>0;
+ $("finishShopping").hidden=items.filter(i=>i.bought).length===0;
  if(items.length>0&&visible.length===0){$("emptyState").hidden=false;$("emptyState").innerHTML='<div class="empty-icon">🔎</div><h2>Nenhum item encontrado</h2><p>Tente outra busca ou mude o filtro.</p>'}
  else if(items.length===0){$("emptyState").innerHTML='<div class="empty-icon">🛒</div><h2>Sua lista está vazia</h2><p>Adicione produtos, informe preço e quantidade e acompanhe o total.</p>'}
  $("list").innerHTML=visible.map(i=>`<article class="item ${i.bought?"bought":""}">
