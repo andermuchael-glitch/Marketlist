@@ -33,6 +33,23 @@ function renderCategories(){
  cats.map(c=>`<button class="filter ${currentCategory===c?"active":""}" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join("");
  document.querySelectorAll("[data-cat]").forEach(b=>b.onclick=()=>{currentCategory=b.dataset.cat;render()});
 }
+function updateItemField(id,field,value){
+ const item=items.find(i=>i.id===id); if(!item)return;
+ if(field==="price") item.price=Math.max(0,Number(value)||0);
+ if(field==="quantity") item.quantity=Math.max(0.01,Number(value)||0.01);
+ save(); render();
+}
+function changeQuantity(id,delta){
+ const item=items.find(i=>i.id===id); if(!item)return;
+ item.quantity=Math.max(0.01,(Number(item.quantity)||1)+delta);
+ save(); render();
+}
+function addQuickItem(){
+ const name=$("quickName").value.trim(); if(!name){$("quickName").focus();return}
+ const category=$("quickCategory").value||"Outros";
+ items.unshift({id:crypto.randomUUID?crypto.randomUUID():Date.now().toString(),name,price:0,quantity:1,category,bought:false});
+ save(); render(); $("quickName").value=""; $("quickName").focus(); toast("Produto adicionado. No mercado, informe preço e quantidade na própria lista.");
+}
 function render(){
  const term=$("search").value.trim().toLowerCase();
  let visible=items.filter(i=>i.name.toLowerCase().includes(term));
@@ -46,9 +63,23 @@ function render(){
  if(items.length>0&&visible.length===0){$("emptyState").hidden=false;$("emptyState").innerHTML='<div class="empty-icon">🔎</div><h2>Nenhum item encontrado</h2><p>Tente outra busca ou mude o filtro.</p>'}
  else if(items.length===0){$("emptyState").innerHTML='<div class="empty-icon">🛒</div><h2>Sua lista está vazia</h2><p>Adicione produtos, informe preço e quantidade e acompanhe o total.</p>'}
  $("list").innerHTML=visible.map(i=>`<article class="item ${i.bought?"bought":""}">
- <button class="check" data-action="toggle" data-id="${i.id}" aria-label="Marcar comprado">${i.bought?"✓":"○"}</button>
- <div><div class="name">${escapeHtml(i.name)}</div><div class="meta">${escapeHtml(i.category||"Outros")} · ${formatQty(i.quantity)} × ${money(i.price)}</div></div>
- <div><div class="item-total">${money(itemTotal(i))}</div><div class="item-actions"><button class="edit" data-action="edit" data-id="${i.id}" aria-label="Editar">✎</button><button class="delete" data-action="delete" data-id="${i.id}" aria-label="Excluir">✕</button></div></div>
+ <button class="check" data-action="toggle" data-id="${i.id}" aria-label="${i.bought?"Marcar como pendente":"Marcar como comprado"}">${i.bought?"✓":"○"}</button>
+ <div class="item-main">
+   <div class="item-head">
+     <div><div class="name">${escapeHtml(i.name)}</div><div class="meta">${escapeHtml(i.category||"Outros")}</div></div>
+     <div class="item-total">${money(itemTotal(i))}</div>
+   </div>
+   <div class="market-controls">
+     <div class="qty-control" aria-label="Quantidade">
+       <button type="button" data-action="qty-minus" data-id="${i.id}">−</button>
+       <input type="number" min="0.01" step="0.01" value="${i.quantity}" data-action="qty-input" data-id="${i.id}" aria-label="Quantidade">
+       <button type="button" data-action="qty-plus" data-id="${i.id}">+</button>
+     </div>
+     <label class="price-control"><span>R$</span><input type="number" min="0" step="0.01" inputmode="decimal" value="${Number(i.price)||0}" data-action="price-input" data-id="${i.id}" aria-label="Preço unitário"></label>
+     <button class="delete" data-action="delete" data-id="${i.id}" aria-label="Excluir">✕</button>
+   </div>
+   <div class="market-hint">${i.bought?"Comprado":"No mercado: ajuste preço e quantidade aqui"}</div>
+ </div>
  </article>`).join("");
  document.querySelectorAll(".filter").forEach(b=>{if(b.dataset.filter)b.classList.toggle("active",b.dataset.filter===currentFilter)});
  renderCategories();updateBudgetUI();
@@ -64,15 +95,22 @@ function renderHistory(){
  if(!history.length){box.innerHTML='<div class="empty"><div class="empty-icon">🧾</div><h2>Nenhuma compra salva</h2><p>Finalize uma compra para ela aparecer aqui.</p></div>';return}
  box.innerHTML=history.map(h=>`<article class="history-entry"><strong>${escapeHtml(h.date)} — ${money(h.total)}</strong><small>${h.count} item(ns)</small><div class="history-items">${h.items.map(i=>escapeHtml(i.name)+ " ("+money(itemTotal(i))+")").join(" · ")}</div></article>`).join("");
 }
-$("addBtn").onclick=()=>openDialog();$("closeDialog").onclick=closeDialog;$("cancelDialog").onclick=closeDialog;
+$("quickAddBtn").onclick=addQuickItem;
+$("quickName").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();addQuickItem()}};
+$("closeDialog").onclick=closeDialog;$("cancelDialog").onclick=closeDialog;
 $("price").oninput=updatePreview;$("quantity").oninput=updatePreview;$("search").oninput=render;
 $("saveBudget").onclick=()=>{budget=Math.max(0,Number($("budgetInput").value)||0);saveBudget();updateBudgetUI();toast(budget?"Orçamento salvo.":"Orçamento removido.")};
 document.querySelectorAll("[data-filter]").forEach(b=>b.onclick=()=>{currentFilter=b.dataset.filter;render()});
 $("clearBought").onclick=()=>{const count=items.filter(i=>i.bought).length;if(!count){toast("Não há itens comprados para limpar.");return}items=items.filter(i=>!i.bought);save();render();toast(`${count} item(ns) comprado(s) removido(s).`)};
 $("list").onclick=e=>{const b=e.target.closest("[data-action]");if(!b)return;const id=b.dataset.id,item=items.find(i=>i.id===id);if(!item)return;
  if(b.dataset.action==="toggle"){item.bought=!item.bought;save();render();return}
- if(b.dataset.action==="edit"){openDialog(item);return}
+ if(b.dataset.action==="qty-plus"){changeQuantity(id,1);return}
+ if(b.dataset.action==="qty-minus"){changeQuantity(id,-1);return}
  if(b.dataset.action==="delete"){lastDeleted={...item};items=items.filter(i=>i.id!==id);save();render();toast("Item excluído.",true)}
+};
+$("list").oninput=e=>{const b=e.target.closest("[data-action]");if(!b)return;
+ if(b.dataset.action==="price-input")updateItemField(b.dataset.id,"price",b.value);
+ if(b.dataset.action==="qty-input")updateItemField(b.dataset.id,"quantity",b.value);
 };
 $("itemForm").onsubmit=e=>{e.preventDefault();const name=$("name").value.trim(),price=Number($("price").value),quantity=Number($("quantity").value),category=$("category").value;if(!name||price<0||quantity<=0)return;
  if(editingId)items=items.map(i=>i.id===editingId?{...i,name,price,quantity,category}:i);else items.unshift({id:crypto.randomUUID?crypto.randomUUID():Date.now().toString(),name,price,quantity,category,bought:false});
