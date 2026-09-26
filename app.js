@@ -168,7 +168,60 @@ $("list").onfocusout=e=>{const b=e.target.closest("[data-action]");if(!b)return;
 $("list").onkeydown=e=>{const b=e.target.closest("[data-action]");if(!b)return;
  if((b.dataset.action==="price-input"||b.dataset.action==="qty-input")&&e.key==="Enter"){e.preventDefault();b.blur();}
 };
+let authClient=null, authConfigured=false, authMode="login";
+function setAuthMessage(message,isError=false){const el=$("authMessage");if(el){el.textContent=message||"";el.classList.toggle("error",isError)}}
+function showApp(){const auth=$("authScreen"),app=document.querySelector(".app-shell");if(auth)auth.hidden=true;if(app)app.hidden=false}
+function showAuth(){const auth=$("authScreen"),app=document.querySelector(".app-shell");if(auth)auth.hidden=false;if(app)app.hidden=true}
+async function setupAuth(){
+ const cfg=window.MARKETLIST_SUPABASE||{};
+ if(!cfg.url||!cfg.key||!window.supabase){showAuth();setAuthMessage("O login em nuvem ainda precisa da configuração do Supabase.");return false}
+ try{
+  authClient=window.supabase.createClient(cfg.url,cfg.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+  authConfigured=true;
+  const {data}=await authClient.auth.getSession();
+  if(data?.session)showApp();else showAuth();
+  authClient.auth.onAuthStateChange((_event,session)=>{if(session)showApp();else showAuth()});
+  return true;
+ }catch(e){showAuth();setAuthMessage("Não foi possível iniciar o login. Verifique a configuração do Supabase.",true);return false}
+}
+async function handleLogin(e){
+ e.preventDefault();if(!authClient){setAuthMessage("Supabase ainda não está configurado.",true);return}
+ const email=$("loginEmail").value.trim(),password=$("loginPassword").value;
+ if(!email||!password)return;
+ const btn=$("loginSubmit");btn.disabled=true;btn.textContent=authMode==="signup"?"Criando...":"Entrando...";
+ setAuthMessage("");
+ try{
+  if(authMode==="signup"){
+   const {data,error}=await authClient.auth.signUp({email,password});
+   if(error)throw error;
+   if(data.session){setAuthMessage("Conta criada com sucesso.");showApp()}else setAuthMessage("Conta criada. Confira seu e-mail para confirmar o acesso.");
+  }else{
+   const {error}=await authClient.auth.signInWithPassword({email,password});
+   if(error)throw error;
+  }
+ }catch(error){setAuthMessage(error?.message||"Não foi possível entrar.",true)}
+ finally{btn.disabled=false;btn.textContent=authMode==="signup"?"Criar conta":"Entrar"}
+}
+async function forgotPassword(){
+ if(!authClient){setAuthMessage("Supabase ainda não está configurado.",true);return}
+ const email=$("loginEmail").value.trim();
+ if(!email){setAuthMessage("Digite seu e-mail para receber o link de recuperação.",true);$("loginEmail").focus();return}
+ try{
+  const {error}=await authClient.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+window.location.pathname});
+  if(error)throw error;setAuthMessage("Enviamos as instruções de recuperação para seu e-mail.");
+ }catch(error){setAuthMessage(error?.message||"Não foi possível enviar a recuperação.",true)}
+}
+function setupAuthUI(){
+ const form=$("loginForm"),signup=$("signupBtn"),forgot=$("forgotPassword"),toggle=$("togglePassword"),offline=$("offlineBtn");
+ form?.addEventListener("submit",handleLogin);
+ signup?.addEventListener("click",()=>{authMode=authMode==="login"?"signup":"login";$("authHeading")?.replaceChildren();$("loginSubmit").textContent=authMode==="signup"?"Criar conta":"Entrar";signup.textContent=authMode==="signup"?"Já tenho uma conta":"Criar minha conta";$("loginPassword").setAttribute("autocomplete",authMode==="signup"?"new-password":"current-password");setAuthMessage(authMode==="signup"?"Crie sua conta com e-mail e senha.":"")});
+ forgot?.addEventListener("click",forgotPassword);
+ toggle?.addEventListener("click",()=>{const input=$("loginPassword");input.type=input.type==="password"?"text":"password";toggle.textContent=input.type==="password"?"◉":"◌"});
+ offline?.addEventListener("click",()=>{sessionStorage.setItem("marketlist-offline","1");showApp();setAuthMessage("")});
+}
 function init(){
+setupAuthUI();
+setupAuth();
 $("itemForm").onsubmit=e=>{
  e.preventDefault();
  const name=$("name").value.trim();
