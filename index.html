@@ -100,10 +100,10 @@
   </dialog>
 
   <dialog id="budgetDialog">
-    <form method="dialog" class="dialog-card compact-dialog">
+    <form id="budgetForm" class="dialog-card compact-dialog">
       <div class="dialog-head"><h2>Orçamento</h2><button type="button" id="closeBudget" class="close">×</button></div>
       <label>Quanto pretende gastar?
-        <input id="budgetEdit" type="number" min="0" step="0.01" inputmode="decimal" placeholder="R$ 300">
+        <input id="budgetEdit" type="text" inputmode="decimal" autocomplete="off" placeholder="Ex.: 300,00">
       </label>
       <button class="primary" id="saveBudgetDialog" type="submit">Salvar orçamento</button>
     </form>
@@ -123,6 +123,6 @@
       <p class="backup-note">O backup inclui produtos, quantidades, preços, orçamento e histórico. A restauração substitui os dados atuais por aqueles do arquivo.</p>
     </form>
   </dialog>
-  <script src="app.js?v=20260926-5"></script>
+  <script src="app.js?v=20260926-6"></script>
 </body>
 </html>
