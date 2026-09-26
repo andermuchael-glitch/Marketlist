@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -272,7 +273,7 @@ fun MarketlistApp(vm: MarketViewModel = viewModel()) {
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF102A63))
                 )
             },
-            bottomBar = { NavigationBar(containerColor = Color.White) { NavigationBarItem(selected = selectedNav == 0, onClick = { selectedNav = 0 }, icon = { Icon(Icons.Default.ShoppingCart, null) }, label = { Text("Lista") }); NavigationBarItem(selected = selectedNav == 1, onClick = { selectedNav = 1; vm.showHistory = true }, icon = { Icon(Icons.Default.History, null) }, label = { Text("Histórico") }); NavigationBarItem(selected = selectedNav == 2, onClick = { selectedNav = 2 }, icon = { Icon(Icons.Default.Search, null) }, label = { Text("Código") }); NavigationBarItem(selected = selectedNav == 3, onClick = { selectedNav = 3; showBudget = true }, icon = { Icon(Icons.Default.MoreVert, null) }, label = { Text("Mais") }) } },
+            bottomBar = { NavigationBar(containerColor = Color.White) { NavigationBarItem(selected = selectedNav == 0, onClick = { selectedNav = 0 }, icon = { Icon(Icons.Default.ShoppingCart, null) }, label = { Text("Lista") }); NavigationBarItem(selected = selectedNav == 1, onClick = { selectedNav = 1; vm.showHistory = true }, icon = { Icon(Icons.Default.History, null) }, label = { Text("Histórico") }); NavigationBarItem(selected = selectedNav == 2, onClick = { selectedNav = 2 }, icon = { Icon(Icons.Default.Search, null) }, label = { Text("Código") }); NavigationBarItem(selected = selectedNav == 3, onClick = { selectedNav = 3; showBudget = true }, icon = { Icon(Icons.Default.Menu, null) }, label = { Text("Mais") }) } },
             floatingActionButton = {
                 ExtendedFloatingActionButton(
                     onClick = { showAddSheet = true },
