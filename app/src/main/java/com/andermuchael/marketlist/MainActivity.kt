@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
@@ -22,6 +23,8 @@ import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,8 +32,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.json.JSONArray
@@ -39,11 +45,19 @@ import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.net.HttpURLConnection
+import java.net.URL
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.auth.providers.builtin.Email
+import io.github.jan.supabase.auth.status.SessionStatus
 
 private const val PREFS = "marketlist"
 private const val ITEMS_KEY = "items"
 private const val BUDGET_KEY = "budget"
 private const val HISTORY_KEY = "history"
+private const val OFFLINE_MODE_KEY = "offline_mode"
 
 data class ShoppingItem(
     val id: Long,
@@ -234,7 +248,353 @@ private fun money(value: Double): String = NumberFormat.getCurrencyInstance(Loca
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { MarketlistApp() }
+        setContent { MarketlistRoot() }
+    }
+}
+
+@Composable
+fun MarketlistRoot() {
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences(PREFS, 0) }
+    var offlineMode by remember { mutableStateOf(prefs.getBoolean(OFFLINE_MODE_KEY, false)) }
+    var client by remember { mutableStateOf<SupabaseClient?>(null) }
+    var configLoading by remember { mutableStateOf(true) }
+    var configError by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        val key = withContext(Dispatchers.IO) {
+            runCatching {
+                val connection = URL(MarketlistSupabase.CONFIG_URL).openConnection() as HttpURLConnection
+                connection.connectTimeout = 8000
+                connection.readTimeout = 8000
+                connection.requestMethod = "GET"
+                connection.inputStream.bufferedReader().use { reader ->
+                    val source = reader.readText()
+                    Regex("""key:\s*"([^"]+)"""").find(source)?.groupValues?.get(1)
+                        ?: error("Chave pública do Supabase não encontrada.")
+                }.also { connection.disconnect() }
+            }.getOrElse { error ->
+                configError = error.message ?: "Não foi possível carregar a configuração."
+                null
+            }
+        }
+        if (!key.isNullOrBlank()) {
+            client = runCatching { MarketlistSupabase.createClient(key) }
+                .onFailure { configError = it.message ?: "Não foi possível iniciar o Supabase." }
+                .getOrNull()
+        }
+        configLoading = false
+    }
+
+    if (offlineMode) {
+        MarketlistApp()
+        return
+    }
+
+    if (client == null) {
+        AuthScreen(
+            client = null,
+            loading = configLoading,
+            initialMessage = if (configLoading) null else configError,
+            onContinueOffline = {
+                prefs.edit().putBoolean(OFFLINE_MODE_KEY, true).apply()
+                offlineMode = true
+            }
+        )
+        return
+    }
+
+    val status by client!!.auth.sessionStatus.collectAsState()
+    when (status) {
+        is SessionStatus.Authenticated -> MarketlistApp()
+        is SessionStatus.Initializing -> AuthScreen(client = client, loading = true, onContinueOffline = {
+            prefs.edit().putBoolean(OFFLINE_MODE_KEY, true).apply()
+            offlineMode = true
+        })
+        else -> AuthScreen(
+            client = client,
+            loading = false,
+            initialMessage = if (status is SessionStatus.RefreshFailure) "Sua sessão expirou. Entre novamente." else null,
+            onContinueOffline = {
+                prefs.edit().putBoolean(OFFLINE_MODE_KEY, true).apply()
+                offlineMode = true
+            }
+        )
+    }
+}
+
+@Composable
+private fun AuthScreen(
+    client: SupabaseClient?,
+    loading: Boolean,
+    initialMessage: String? = null,
+    onContinueOffline: () -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var isSignUp by remember { mutableStateOf(false) }
+    var passwordVisible by remember { mutableStateOf(false) }
+    var busy by remember { mutableStateOf(false) }
+    var message by remember(initialMessage) { mutableStateOf(initialMessage.orEmpty()) }
+    var isError by remember { mutableStateOf(false) }
+
+    fun showError(text: String) {
+        message = text
+        isError = true
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = Color(0xFF081B3A)
+    ) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(horizontal = 20.dp, vertical = 18.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 430.dp)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    Modifier
+                        .size(76.dp)
+                        .padding(4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(24.dp),
+                        color = Color(0xFF2563EB)
+                    ) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.ShoppingCart,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(38.dp)
+                            )
+                        }
+                    }
+                }
+
+                Text(
+                    "Marketlist",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = Color.White
+                )
+                Text(
+                    "Sua lista de compras mais simples e inteligente",
+                    color = Color.White.copy(alpha = .72f),
+                    style = MaterialTheme.typography.bodySmall
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    listOf(
+                        Color(0xFFEF4444) to "Tomate",
+                        Color(0xFFFACC15) to "Limão",
+                        Color(0xFF22C55E) to "Folhas",
+                        Color(0xFFF59E0B) to "Pão"
+                    ).forEach { (color, label) ->
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Surface(
+                                Modifier.size(38.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                color = color.copy(alpha = .95f)
+                            ) {}
+                            Spacer(Modifier.height(2.dp))
+                            Text(label, color = Color.White.copy(alpha = .52f), style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                Card(
+                    Modifier.fillMaxWidth(),
+                    RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(
+                        Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            if (isSignUp) "Crie sua conta" else "Bem-vindo",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = Color(0xFF102A63)
+                        )
+                        Text(
+                            if (isSignUp) "Use o mesmo acesso no PWA e no Android."
+                            else "Entre para manter sua lista sincronizada com sua conta.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF64748B)
+                        )
+
+                        OutlinedTextField(
+                            value = email,
+                            onValueChange = { email = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("E-mail") },
+                            placeholder = { Text("seu@email.com") },
+                            singleLine = true,
+                            enabled = !busy,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                            shape = RoundedCornerShape(14.dp)
+                        )
+
+                        OutlinedTextField(
+                            value = password,
+                            onValueChange = { password = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Senha") },
+                            placeholder = { Text("Sua senha") },
+                            singleLine = true,
+                            enabled = !busy,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            trailingIcon = {
+                                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                    Icon(
+                                        if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                        contentDescription = if (passwordVisible) "Ocultar senha" else "Mostrar senha"
+                                    )
+                                }
+                            },
+                            shape = RoundedCornerShape(14.dp)
+                        )
+
+                        Button(
+                            onClick = {
+                                val cleanEmail = email.trim()
+                                if (cleanEmail.isEmpty() || password.length < 6) {
+                                    showError("Informe um e-mail e uma senha com pelo menos 6 caracteres.")
+                                    return@Button
+                                }
+                                if (client == null) {
+                                    showError("Não foi possível conectar ao login em nuvem.")
+                                    return@Button
+                                }
+                                scope.launch {
+                                    busy = true
+                                    message = ""
+                                    isError = false
+                                    runCatching {
+                                        if (isSignUp) {
+                                            client.auth.signUpWith(Email) {
+                                                this.email = cleanEmail
+                                                this.password = password
+                                            }
+                                        } else {
+                                            client.auth.signInWith(Email) {
+                                                this.email = cleanEmail
+                                                this.password = password
+                                            }
+                                        }
+                                    }.onSuccess {
+                                        if (isSignUp) {
+                                            message = "Conta criada. Confira seu e-mail para confirmar o acesso."
+                                        }
+                                    }.onFailure {
+                                        showError(it.message ?: "Não foi possível concluir o acesso.")
+                                    }
+                                    busy = false
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().height(50.dp),
+                            enabled = !loading && !busy && client != null,
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))
+                        ) {
+                            Text(
+                                if (busy) "Aguarde..." else if (isSignUp) "Criar minha conta" else "Entrar",
+                                color = Color.White
+                            )
+                        }
+
+                        if (!isSignUp) {
+                            TextButton(
+                                onClick = {
+                                    val cleanEmail = email.trim()
+                                    if (cleanEmail.isEmpty()) {
+                                        showError("Digite seu e-mail para receber o link de recuperação.")
+                                        return@TextButton
+                                    }
+                                    if (client == null) {
+                                        showError("Login em nuvem indisponível no momento.")
+                                        return@TextButton
+                                    }
+                                    scope.launch {
+                                        busy = true
+                                        runCatching {
+                                            client.auth.resetPasswordForEmail(
+                                                email = cleanEmail,
+                                                redirectUrl = MarketlistSupabase.SITE_URL
+                                            )
+                                        }.onSuccess {
+                                            message = "Enviamos as instruções de recuperação para seu e-mail."
+                                            isError = false
+                                        }.onFailure {
+                                            showError(it.message ?: "Não foi possível enviar a recuperação.")
+                                        }
+                                        busy = false
+                                    }
+                                },
+                                enabled = !busy
+                            ) {
+                                Text("Esqueci minha senha")
+                            }
+                        }
+
+                        HorizontalDivider()
+
+                        OutlinedButton(
+                            onClick = {
+                                isSignUp = !isSignUp
+                                message = ""
+                                isError = false
+                            },
+                            modifier = Modifier.fillMaxWidth().height(46.dp),
+                            enabled = !busy,
+                            shape = RoundedCornerShape(14.dp)
+                        ) {
+                            Text(if (isSignUp) "Já tenho uma conta" else "Criar minha conta")
+                        }
+
+                        TextButton(
+                            onClick = onContinueOffline,
+                            enabled = !busy
+                        ) {
+                            Text("Continuar sem login")
+                        }
+
+                        if (message.isNotBlank()) {
+                            Text(
+                                message,
+                                color = if (isError) Color(0xFFDC2626) else Color(0xFF047857),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Sua sessão fica protegida pelo Supabase.",
+                    color = Color.White.copy(alpha = .55f),
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
+        }
     }
 }
 
