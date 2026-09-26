@@ -135,7 +135,8 @@ if(budgetForm&&budgetDialog)budgetForm.addEventListener("submit",e=>{
   updateBudgetUI();
   budgetDialog.close();
   toast(budget?"Orçamento de "+money(budget)+" salvo.":"Orçamento removido.");
-});\nconst budgetEditButton=$("budgetEditButton");
+});
+const budgetEditButton=$("budgetEditButton");
 if(budgetEditButton)budgetEditButton.onclick=()=>budgetBtn?.click();
 document.querySelectorAll("[data-nav]").forEach(btn=>btn.onclick=()=>{
  const target=btn.dataset.nav;
