@@ -1,18 +1,16 @@
 # Marketlist
 
-Aplicativo Android moderno para lista de compras.
+PWA de lista de compras, pronta para funcionar pelo navegador e ser instalada como aplicativo.
 
-## Primeira versão
-- adicionar item, valor e quantidade;
-- total automático;
-- marcar como comprado;
-- item comprado fica riscado;
-- excluir item;
-- limpar comprados;
-- interface Jetpack Compose;
-- estrutura Supabase preparada;
-- GitHub Actions gera APK debug;
-- sem AAB nesta etapa.
+### Recursos
+- Adicionar produto, preço e quantidade
+- Total automático por item e da lista
+- Marcar comprado com um toque
+- Itens comprados ficam riscados
+- Exclusão individual e limpeza dos comprados
+- Busca de produtos
+- Persistência local no navegador
+- Instalação como PWA no Android
+- Interface responsiva para celular, tablet e computador
 
-## Próximo passo
-Ligar a persistência local e sincronização Supabase com autenticação e RLS.
+A versão Android nativa continua no projeto e será corrigida depois que a PWA estiver validada.
