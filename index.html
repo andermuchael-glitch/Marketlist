@@ -59,7 +59,7 @@
     <section id="categoryFilters" class="filters category-filters" aria-label="Categorias"></section>
     <section id="list" class="list" aria-live="polite"></section>
     <section class="finish-row"><button id="finishShopping" class="primary">✓ Arquivar comprados</button></section>
-    <button id="fabAdd" class="fab" aria-label="Adicionar novo produto" title="Novo produto">+</button>
+    <button id="fabAdd" class="fab" type="button" onclick="document.getElementById('itemDialog').showModal()" aria-label="Adicionar novo produto" title="Novo produto">+</button>
   <dialog id="historyDialog"><div class="history-card">
       <div class="dialog-head"><h2>Histórico de compras</h2><button type="button" id="closeHistory" class="close">×</button></div>
       <div id="historyList" class="history-list"></div>
@@ -115,6 +115,6 @@
       <p class="backup-note">O backup inclui produtos, quantidades, preços, orçamento e histórico. A restauração substitui os dados atuais por aqueles do arquivo.</p>
     </form>
   </dialog>
-  <script src="app.js"></script>
+  <script src="app.js?v=20260926-2"></script>
 </body>
 </html>
