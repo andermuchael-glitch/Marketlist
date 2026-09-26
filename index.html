@@ -22,6 +22,7 @@
       </div>
       <div class="top-actions">
         <button id="budgetBtn" class="icon-btn" aria-label="Orçamento" title="Orçamento">R$</button>
+        <button id="backupBtn" class="icon-btn" aria-label="Backup e restauração" title="Backup e restauração">↥</button>
         <button id="historyBtn" class="icon-btn" aria-label="Histórico" title="Histórico">◷</button>
         <button id="installBtn" class="icon-btn" hidden aria-label="Instalar aplicativo">⇩</button>
       </div>
@@ -97,6 +98,21 @@
         <input id="budgetEdit" type="number" min="0" step="0.01" inputmode="decimal" placeholder="R$ 300">
       </label>
       <button class="primary" id="saveBudgetDialog" type="submit">Salvar orçamento</button>
+    </form>
+  </dialog>
+  <dialog id="backupDialog">
+    <form method="dialog" class="dialog-card compact-dialog">
+      <div class="dialog-head">
+        <div>
+          <h2>Backup da lista</h2>
+          <p class="dialog-subtitle">Proteja sua lista antes de atualizar ou trocar de aparelho.</p>
+        </div>
+        <button type="button" id="closeBackup" class="close">×</button>
+      </div>
+      <button type="button" id="downloadBackup" class="primary">↓ Baixar backup agora</button>
+      <button type="button" id="restoreBackup" class="secondary">↑ Restaurar um backup</button>
+      <input id="backupFile" type="file" accept=".json,application/json" hidden>
+      <p class="backup-note">O backup inclui produtos, quantidades, preços, orçamento e histórico. A restauração substitui os dados atuais por aqueles do arquivo.</p>
     </form>
   </dialog>
   <script src="app.js"></script>
