@@ -132,8 +132,14 @@ $("list").onclick=e=>{const b=e.target.closest("[data-action]");if(!b)return;con
  if(b.dataset.action==="delete"){lastDeleted={...item};items=items.filter(i=>i.id!==id);save();render();toast("Item excluído.",true)}
 };
 $("list").oninput=e=>{const b=e.target.closest("[data-action]");if(!b)return;
+ if(b.dataset.action==="price-input"||b.dataset.action==="qty-input")b.dataset.draft=b.value;
+};
+$("list").onfocusout=e=>{const b=e.target.closest("[data-action]");if(!b)return;
  if(b.dataset.action==="price-input")updateItemField(b.dataset.id,"price",b.value);
  if(b.dataset.action==="qty-input")updateItemField(b.dataset.id,"quantity",b.value);
+};
+$("list").onkeydown=e=>{const b=e.target.closest("[data-action]");if(!b)return;
+ if((b.dataset.action==="price-input"||b.dataset.action==="qty-input")&&e.key==="Enter"){e.preventDefault();b.blur();}
 };
 $("itemForm").onsubmit=e=>{e.preventDefault();const name=$("name").value.trim(),price=Number($("price").value),quantity=Number($("quantity").value),category=$("category").value;if(!name||price<0||quantity<=0)return;
  if(editingId)items=items.map(i=>i.id===editingId?{...i,name,price,quantity,category}:i);else items.unshift({id:crypto.randomUUID?crypto.randomUUID():Date.now().toString(),name,price,quantity,category,bought:false});
