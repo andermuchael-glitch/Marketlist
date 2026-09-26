@@ -268,7 +268,8 @@ fun MarketlistApp(vm: MarketViewModel = viewModel()) {
                         IconButton(onClick = { vm.showHistory = true }) {
                             Icon(Icons.Default.History, "Histórico de compras", tint = Color.White)
                         }
-                    }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF102A63))
                 )
             },
             bottomBar = { NavigationBar(containerColor = Color.White) { NavigationBarItem(selected = selectedNav == 0, onClick = { selectedNav = 0 }, icon = { Icon(Icons.Default.ShoppingCart, null) }, label = { Text("Lista") }); NavigationBarItem(selected = selectedNav == 1, onClick = { selectedNav = 1; vm.showHistory = true }, icon = { Icon(Icons.Default.History, null) }, label = { Text("Histórico") }); NavigationBarItem(selected = selectedNav == 2, onClick = { selectedNav = 2 }, icon = { Icon(Icons.Default.Search, null) }, label = { Text("Código") }); NavigationBarItem(selected = selectedNav == 3, onClick = { selectedNav = 3; showBudget = true }, icon = { Icon(Icons.Default.MoreVert, null) }, label = { Text("Mais") }) } },
