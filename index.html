@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#2563eb">
   <meta name="description" content="Marketlist — lista de compras simples, rápida e persistente.">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="icon.svg">
   <link rel="stylesheet" href="styles.css">
   <title>Marketlist</title>
 </head>
@@ -14,11 +14,7 @@
   <main class="app-shell">
     <header class="topbar">
       <div class="brand">
-        <div class="brand-mark">M</div>
-        <div>
-          <p class="eyebrow">LISTA DE COMPRAS</p>
-          <h1>Marketlist</h1>
-        </div>
+        <img class="brand-logo" src="logo.svg" alt="Marketlist"><div class="brand-copy"><p class="eyebrow">SUA LISTA DE COMPRAS</p><h1>Marketlist</h1><p class="brand-tagline">Simples, rápida e inteligente</p></div>
       </div>
       <div class="top-actions">
         <button id="budgetBtn" class="icon-btn" aria-label="Orçamento" title="Orçamento">R$</button>
@@ -37,13 +33,7 @@
       <div><span>Comprados</span><strong id="boughtCount">0</strong></div>
     </section>
 
-    <section class="budget-row" aria-live="polite">
-      <div class="budget-card">
-        <span>ORÇAMENTO</span>
-        <strong id="budgetValue">Não definido</strong>
-      </div>
-      <p id="budgetStatus" class="budget-status">Defina um orçamento para acompanhar quanto ainda pode gastar.</p>
-    </section>
+    <section class="budget-row" aria-live="polite"><div class="budget-top"><div><span>ORÇAMENTO</span><strong id="budgetValue">Não definido</strong></div><button type="button" class="budget-edit" id="budgetEditButton">Editar</button></div><div class="budget-progress"><i id="budgetProgress"></i></div><div class="budget-bottom"><span>Gasto até agora <b id="budgetSpent">R$ 0,00</b></span><span>Ainda pode gastar <b id="budgetRemaining">—</b></span></div><p id="budgetStatus" class="budget-status">Defina um orçamento para acompanhar quanto ainda pode gastar.</p></section>
 
     <section class="toolbar">
       <div class="search-box">
@@ -67,7 +57,7 @@
     <section id="categoryFilters" class="filters category-filters" aria-label="Categorias"></section>
     <section id="list" class="list" aria-live="polite"></section>
     <section class="finish-row"><button id="finishShopping" class="primary">✓ Arquivar comprados</button></section>
-    <button id="fabAdd" class="fab" type="button" onclick="document.getElementById('itemDialog').showModal()" aria-label="Adicionar novo produto" title="Novo produto">+</button>
+    <button id="fabAdd" class="fab" type="button" aria-label="Adicionar novo produto" title="Novo produto">+</button><nav class="bottom-nav" aria-label="Navegação principal"><button class="nav-item active" type="button" data-nav="list"><span>☷</span><b>Lista</b></button><button class="nav-item" type="button" data-nav="history"><span>◷</span><b>Histórico</b></button><button class="nav-item" type="button" data-nav="backup"><span>▥</span><b>Código</b></button><button class="nav-item" type="button" data-nav="budget"><span>•••</span><b>Mais</b></button></nav>
   <dialog id="historyDialog"><div class="history-card">
       <div class="dialog-head"><h2>Histórico de compras</h2><button type="button" id="closeHistory" class="close">×</button></div>
       <div id="historyList" class="history-list"></div>
@@ -123,6 +113,6 @@
       <p class="backup-note">O backup inclui produtos, quantidades, preços, orçamento e histórico. A restauração substitui os dados atuais por aqueles do arquivo.</p>
     </form>
   </dialog>
-  <script src="app.js?v=20260926-6"></script>
+  <script src="app.js?v=20260926-7"></script>
 </body>
 </html>
