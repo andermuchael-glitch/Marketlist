@@ -150,6 +150,11 @@ class MarketViewModel(app: Application) : AndroidViewModel(app) {
         }
     }.getOrDefault(emptyList())
 
+    var cloudRevision by mutableIntStateOf(0)
+        private set
+
+    private fun markCloudChanged() { cloudRevision++ }
+
     private fun saveItems() {
         val array = JSONArray()
         items.forEach { item ->
@@ -159,6 +164,7 @@ class MarketViewModel(app: Application) : AndroidViewModel(app) {
             })
         }
         prefs.edit().putString(ITEMS_KEY, array.toString()).apply()
+        markCloudChanged()
     }
 
     private fun saveHistory() {
@@ -182,6 +188,7 @@ class MarketViewModel(app: Application) : AndroidViewModel(app) {
             })
         }
         prefs.edit().putString(HISTORY_KEY, array.toString()).apply()
+        markCloudChanged()
     }
 
     fun addQuickItem() {
@@ -193,7 +200,7 @@ class MarketViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun updatePrice(id: Long, text: String) {
-        val value = text.replace(",", ".").toDoubleOrNull() ?: 0.0
+        val value = parseBrazilianDecimal(text)
         items = items.map { if (it.id == id) it.copy(price = value.coerceAtLeast(0.0)) else it }
         saveItems()
     }
@@ -219,8 +226,9 @@ class MarketViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun setBudget(text: String) {
-        budget = text.replace(",", ".").toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
+        budget = parseBrazilianDecimal(text).coerceAtLeast(0.0)
         prefs.edit().putString(BUDGET_KEY, budget.toString()).apply()
+        markCloudChanged()
     }
 
     fun archiveBought() {
@@ -242,6 +250,141 @@ class MarketViewModel(app: Application) : AndroidViewModel(app) {
         history = emptyList()
         saveHistory()
     }
+
+    fun hasLocalCloudData(): Boolean =
+        items.isNotEmpty() || history.isNotEmpty() || budget > 0.0
+
+    suspend fun syncInitial(client: SupabaseClient) {
+        runCatching {
+            val remote = MarketlistCloud.load(client)
+            if (remote != null) {
+                val remoteItems = runCatching { JSONArray(remote.items) }.getOrElse { JSONArray() }
+                val remoteHistory = runCatching { JSONArray(remote.history) }.getOrElse { JSONArray() }
+                val remoteHasData = remoteItems.length() > 0 || remoteHistory.length() > 0 || remote.budget > 0.0
+                if (remoteHasData) {
+                    items = parseItems(remoteItems)
+                    history = parseHistory(remoteHistory)
+                    budget = remote.budget.coerceAtLeast(0.0)
+                    persistItemsOnly()
+                    persistHistoryOnly()
+                    persistBudgetOnly()
+                } else if (hasLocalCloudData()) {
+                    syncToCloud(client)
+                }
+            } else if (hasLocalCloudData()) {
+                syncToCloud(client)
+            }
+        }
+    }
+
+    suspend fun syncToCloud(client: SupabaseClient) {
+        runCatching {
+            val itemsArray = JSONArray()
+            items.forEach { item ->
+                itemsArray.put(JSONObject().apply {
+                    put("id", item.id)
+                    put("name", item.name)
+                    put("category", item.category)
+                    put("price", item.price)
+                    put("quantity", item.quantity)
+                    put("bought", item.bought)
+                })
+            }
+            val historyArray = JSONArray()
+            history.forEach { h ->
+                historyArray.put(JSONObject().apply {
+                    put("id", h.id)
+                    put("date", h.date)
+                    put("total", h.total)
+                    put("count", h.count)
+                    put("items", JSONArray().apply {
+                        h.items.forEach { item ->
+                            put(JSONObject().apply {
+                                put("name", item.name)
+                                put("category", item.category)
+                                put("price", item.price)
+                                put("quantity", item.quantity)
+                            })
+                        }
+                    })
+                })
+            }
+            MarketlistCloud.save(client, itemsArray.toString(), budget, historyArray.toString())
+        }
+    }
+
+    private fun persistItemsOnly() {
+        val array = JSONArray()
+        items.forEach { item ->
+            array.put(JSONObject().apply {
+                put("id", item.id); put("name", item.name); put("category", item.category)
+                put("price", item.price); put("quantity", item.quantity); put("bought", item.bought)
+            })
+        }
+        prefs.edit().putString(ITEMS_KEY, array.toString()).apply()
+    }
+
+    private fun persistHistoryOnly() {
+        val array = JSONArray()
+        history.forEach { h ->
+            array.put(JSONObject().apply {
+                put("id", h.id); put("date", h.date); put("total", h.total); put("count", h.count)
+                put("items", JSONArray().apply {
+                    h.items.forEach { item ->
+                        put(JSONObject().apply {
+                            put("name", item.name); put("category", item.category)
+                            put("price", item.price); put("quantity", item.quantity)
+                        })
+                    }
+                })
+            })
+        }
+        prefs.edit().putString(HISTORY_KEY, array.toString()).apply()
+    }
+
+    private fun persistBudgetOnly() {
+        prefs.edit().putString(BUDGET_KEY, budget.toString()).apply()
+    }
+
+    private fun parseItems(array: JSONArray): List<ShoppingItem> = runCatching {
+        List(array.length()) { i ->
+            val o = array.getJSONObject(i)
+            ShoppingItem(
+                id = o.optLong("id"),
+                name = o.optString("name"),
+                category = o.optString("category", "Outros"),
+                price = o.optDouble("price", 0.0),
+                quantity = o.optDouble("quantity", 1.0).coerceAtLeast(0.01),
+                bought = o.optBoolean("bought", false)
+            )
+        }
+    }.getOrDefault(emptyList())
+
+    private fun parseHistory(array: JSONArray): List<PurchaseHistory> = runCatching {
+        List(array.length()) { i ->
+            val o = array.getJSONObject(i)
+            val savedItems = mutableListOf<HistoryItem>()
+            val itemArray = o.optJSONArray("items") ?: JSONArray()
+            for (j in 0 until itemArray.length()) {
+                val item = itemArray.getJSONObject(j)
+                savedItems += HistoryItem(
+                    item.optString("name"),
+                    item.optString("category", "Outros"),
+                    item.optDouble("price", 0.0),
+                    item.optDouble("quantity", 1.0)
+                )
+            }
+            PurchaseHistory(o.optLong("id"), o.optString("date"), o.optDouble("total"), o.optInt("count"), savedItems)
+        }
+    }.getOrDefault(emptyList())
+
+}
+
+private fun parseBrazilianDecimal(value: String): Double {
+    var s = value.trim().replace("R$", "").replace(" ", "")
+    if (s.isEmpty()) return 0.0
+    s = if (s.contains(",") && s.contains(".")) s.replace(".", "").replace(",", ".") else s.replace(",", ".")
+    return s.toDoubleOrNull() ?: 0.0
 }
 
 private fun money(value: Double): String = NumberFormat.getCurrencyInstance(Locale("pt", "BR")).format(value)
@@ -291,7 +434,7 @@ fun MarketlistRoot() {
 
     val status by client!!.auth.sessionStatus.collectAsState()
     when (status) {
-        is SessionStatus.Authenticated -> MarketlistApp()
+is SessionStatus.Authenticated -> MarketlistApp(client!!)
         is SessionStatus.Initializing -> AuthScreen(client = client, loading = true, onContinueOffline = {
             prefs.edit().putBoolean(OFFLINE_MODE_KEY, true).apply()
             offlineMode = true
@@ -585,13 +728,24 @@ private fun AuthScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MarketlistApp(vm: MarketViewModel = viewModel()) {
+fun MarketlistApp(client: SupabaseClient, vm: MarketViewModel = viewModel()) {
     var categoryMenuOpen by remember { mutableStateOf(false) }
     var showAddSheet by remember { mutableStateOf(false) }
     var showBudget by remember { mutableStateOf(false) }
     var budgetText by remember(vm.budget) { mutableStateOf(if (vm.budget == 0.0) "" else vm.budget.toString()) }
     var currentFilter by remember { mutableStateOf("Todos") }
     var selectedNav by remember { mutableIntStateOf(0) }
+    var cloudInitialized by remember(client) { mutableStateOf(false) }
+
+    LaunchedEffect(client) {
+        vm.syncInitial(client)
+        cloudInitialized = true
+    }
+    LaunchedEffect(vm.cloudRevision, cloudInitialized) {
+        if (!cloudInitialized) return@LaunchedEffect
+        kotlinx.coroutines.delay(700)
+        vm.syncToCloud(client)
+    }
 
     MaterialTheme(
         colorScheme = lightColorScheme(
