@@ -1,100 +1,93 @@
-const KEY="marketlist-items-v1";
+const KEY="marketlist-items-v1", BUDGET_KEY="marketlist-budget-v1", HISTORY_KEY="marketlist-history-v1";
 let items=JSON.parse(localStorage.getItem(KEY)||"[]");
-let deferredPrompt=null;
-let currentFilter="all";
-let editingId=null;
-let lastDeleted=null;
+let history=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]");
+let budget=Number(localStorage.getItem(BUDGET_KEY)||0);
+let deferredPrompt=null,currentFilter="all",currentCategory="all",editingId=null,lastDeleted=null;
 const $=id=>document.getElementById(id);
 const money=v=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Number(v)||0);
 const save=()=>localStorage.setItem(KEY,JSON.stringify(items));
+const saveBudget=()=>localStorage.setItem(BUDGET_KEY,String(budget));
+const saveHistory=()=>localStorage.setItem(HISTORY_KEY,JSON.stringify(history));
 const itemTotal=i=>(Number(i.price)||0)*(Number(i.quantity)||0);
 const total=()=>items.reduce((s,i)=>s+itemTotal(i),0);
 const escapeHtml=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 const formatQty=q=>Number(q)%1===0?Number(q).toString():Number(q).toLocaleString("pt-BR",{maximumFractionDigits:2});
 
 function toast(message,undo=false){
-  let el=$("toast"); if(!el){el=document.createElement("div");el.id="toast";el.className="toast";document.body.appendChild(el)}
-  el.innerHTML=undo?escapeHtml(message)+' <button id="undoDelete" style="margin-left:10px;border:0;border-radius:8px;padding:6px 9px;cursor:pointer">Desfazer</button>':escapeHtml(message);
-  el.classList.add("show"); clearTimeout(window.toastTimer); window.toastTimer=setTimeout(()=>el.classList.remove("show"),3500);
-  if(undo) $("undoDelete").onclick=()=>{if(lastDeleted){items.unshift(lastDeleted);lastDeleted=null;save();render();el.classList.remove("show")}};
+ let el=$("toast");if(!el){el=document.createElement("div");el.id="toast";el.className="toast";document.body.appendChild(el)}
+ el.innerHTML=undo?escapeHtml(message)+' <button id="undoDelete" style="margin-left:10px;border:0;border-radius:8px;padding:6px 9px;cursor:pointer">Desfazer</button>':escapeHtml(message);
+ el.classList.add("show");clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>el.classList.remove("show"),3500);
+ if(undo)$("undoDelete").onclick=()=>{if(lastDeleted){items.unshift(lastDeleted);lastDeleted=null;save();render();el.classList.remove("show")}};
 }
-
+function updateBudgetUI(){
+ $("budgetValue").textContent=money(budget);
+ $("budgetInput").value=budget||"";
+ const diff=budget-total(), status=$("budgetStatus");
+ if(!budget){status.textContent="Defina um orçamento para acompanhar quanto ainda pode gastar.";status.className="budget-status"}
+ else if(diff>=0){status.textContent=`Você ainda pode gastar ${money(diff)}.`;status.className="budget-status"}
+ else{status.textContent=`Orçamento ultrapassado em ${money(Math.abs(diff))}.`;status.className="budget-status over"}
+}
+function renderCategories(){
+ const cats=[...new Set(items.map(i=>i.category||"Outros"))].sort();
+ $("categoryFilters").innerHTML='<button class="filter '+(currentCategory==="all"?"active":"")+'" data-cat="all">Todas</button>'+
+ cats.map(c=>`<button class="filter ${currentCategory===c?"active":""}" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join("");
+ document.querySelectorAll("[data-cat]").forEach(b=>b.onclick=()=>{currentCategory=b.dataset.cat;render()});
+}
 function render(){
-  const term=$("search").value.trim().toLowerCase();
-  let visible=items.filter(i=>i.name.toLowerCase().includes(term));
-  if(currentFilter==="pending") visible=visible.filter(i=>!i.bought);
-  if(currentFilter==="bought") visible=visible.filter(i=>i.bought);
-
-  $("grandTotal").textContent=money(total());
-  $("pendingCount").textContent=items.filter(i=>!i.bought).length;
-  $("boughtCount").textContent=items.filter(i=>i.bought).length;
-  $("emptyState").hidden=visible.length>0;
-  if(items.length>0 && visible.length===0){$("emptyState").hidden=false;$("emptyState").innerHTML='<div class="empty-icon">🔎</div><h2>Nenhum item encontrado</h2><p>Tente outra busca ou mude o filtro.</p>'}
-  else if(items.length===0){$("emptyState").innerHTML='<div class="empty-icon">🛒</div><h2>Sua lista está vazia</h2><p>Adicione produtos, informe preço e quantidade e acompanhe o total.</p>'}
-
-  $("list").innerHTML=visible.map(i=>{
-    const t=itemTotal(i);
-    return `<article class="item ${i.bought?"bought":""}">
-      <button class="check" data-action="toggle" data-id="${i.id}" aria-label="${i.bought?"Marcar como pendente":"Marcar como comprado"}">${i.bought?"✓":"○"}</button>
-      <div><div class="name">${escapeHtml(i.name)}</div><div class="meta">${formatQty(i.quantity)} × ${money(i.price)}</div></div>
-      <div><div class="item-total">${money(t)}</div><div class="item-actions"><button class="edit" data-action="edit" data-id="${i.id}" aria-label="Editar">✎</button><button class="delete" data-action="delete" data-id="${i.id}" aria-label="Excluir">✕</button></div></div>
-    </article>`;
-  }).join("");
-
-  document.querySelectorAll(".filter").forEach(b=>b.classList.toggle("active",b.dataset.filter===currentFilter));
+ const term=$("search").value.trim().toLowerCase();
+ let visible=items.filter(i=>i.name.toLowerCase().includes(term));
+ if(currentFilter==="pending")visible=visible.filter(i=>!i.bought);
+ if(currentFilter==="bought")visible=visible.filter(i=>i.bought);
+ if(currentCategory!=="all")visible=visible.filter(i=>(i.category||"Outros")===currentCategory);
+ $("grandTotal").textContent=money(total());
+ $("pendingCount").textContent=items.filter(i=>!i.bought).length;
+ $("boughtCount").textContent=items.filter(i=>i.bought).length;
+ $("emptyState").hidden=visible.length>0;
+ if(items.length>0&&visible.length===0){$("emptyState").hidden=false;$("emptyState").innerHTML='<div class="empty-icon">🔎</div><h2>Nenhum item encontrado</h2><p>Tente outra busca ou mude o filtro.</p>'}
+ else if(items.length===0){$("emptyState").innerHTML='<div class="empty-icon">🛒</div><h2>Sua lista está vazia</h2><p>Adicione produtos, informe preço e quantidade e acompanhe o total.</p>'}
+ $("list").innerHTML=visible.map(i=>`<article class="item ${i.bought?"bought":""}">
+ <button class="check" data-action="toggle" data-id="${i.id}" aria-label="Marcar comprado">${i.bought?"✓":"○"}</button>
+ <div><div class="name">${escapeHtml(i.name)}</div><div class="meta">${escapeHtml(i.category||"Outros")} · ${formatQty(i.quantity)} × ${money(i.price)}</div></div>
+ <div><div class="item-total">${money(itemTotal(i))}</div><div class="item-actions"><button class="edit" data-action="edit" data-id="${i.id}" aria-label="Editar">✎</button><button class="delete" data-action="delete" data-id="${i.id}" aria-label="Excluir">✕</button></div></div>
+ </article>`).join("");
+ document.querySelectorAll(".filter").forEach(b=>{if(b.dataset.filter)b.classList.toggle("active",b.dataset.filter===currentFilter)});
+ renderCategories();updateBudgetUI();
 }
-
-function updatePreview(){ $("itemPreview").textContent=money((Number($("price").value)||0)*(Number($("quantity").value)||0)); }
-
+function updatePreview(){$("itemPreview").textContent=money((Number($("price").value)||0)*(Number($("quantity").value)||0))}
 function openDialog(item=null){
-  editingId=item?.id||null;
-  $("itemForm").reset(); $("quantity").value=item?.quantity??1;
-  $("name").value=item?.name??""; $("price").value=item?.price??"";
-  $("dialogTitle").textContent=item?"Editar item":"Adicionar item";
-  $("submitItem").textContent=item?"Salvar alterações":"Adicionar à lista";
-  updatePreview(); $("itemDialog").showModal(); setTimeout(()=>$("name").focus(),50);
+ editingId=item?.id||null;$("itemForm").reset();$("quantity").value=item?.quantity??1;$("name").value=item?.name??"";$("price").value=item?.price??"";
+ $("category").value=item?.category||"Outros";$("dialogTitle").textContent=item?"Editar item":"Adicionar item";$("submitItem").textContent=item?"Salvar alterações":"Adicionar à lista";updatePreview();$("itemDialog").showModal();setTimeout(()=>$("name").focus(),50);
 }
 function closeDialog(){editingId=null;$("itemDialog").close()}
-
-$("addBtn").onclick=()=>openDialog();
-$("closeDialog").onclick=closeDialog;
-$("cancelDialog").onclick=closeDialog;
-$("price").oninput=updatePreview; $("quantity").oninput=updatePreview;
-$("search").oninput=render;
-
-document.querySelectorAll(".filter").forEach(b=>b.onclick=()=>{currentFilter=b.dataset.filter;render()});
-
-$("clearBought").onclick=()=>{
-  const count=items.filter(i=>i.bought).length;
-  if(!count){toast("Não há itens comprados para limpar.");return}
-  items=items.filter(i=>!i.bought);save();render();toast(`${count} item(ns) comprado(s) removido(s).`);
+function renderHistory(){
+ const box=$("historyList");
+ if(!history.length){box.innerHTML='<div class="empty"><div class="empty-icon">🧾</div><h2>Nenhuma compra salva</h2><p>Finalize uma compra para ela aparecer aqui.</p></div>';return}
+ box.innerHTML=history.map(h=>`<article class="history-entry"><strong>${escapeHtml(h.date)} — ${money(h.total)}</strong><small>${h.count} item(ns)</small><div class="history-items">${h.items.map(i=>escapeHtml(i.name)+ " ("+money(itemTotal(i))+")").join(" · ")}</div></article>`).join("");
+}
+$("addBtn").onclick=()=>openDialog();$("closeDialog").onclick=closeDialog;$("cancelDialog").onclick=closeDialog;
+$("price").oninput=updatePreview;$("quantity").oninput=updatePreview;$("search").oninput=render;
+$("saveBudget").onclick=()=>{budget=Math.max(0,Number($("budgetInput").value)||0);saveBudget();updateBudgetUI();toast(budget?"Orçamento salvo.":"Orçamento removido.")};
+document.querySelectorAll("[data-filter]").forEach(b=>b.onclick=()=>{currentFilter=b.dataset.filter;render()});
+$("clearBought").onclick=()=>{const count=items.filter(i=>i.bought).length;if(!count){toast("Não há itens comprados para limpar.");return}items=items.filter(i=>!i.bought);save();render();toast(`${count} item(ns) comprado(s) removido(s).`)};
+$("list").onclick=e=>{const b=e.target.closest("[data-action]");if(!b)return;const id=b.dataset.id,item=items.find(i=>i.id===id);if(!item)return;
+ if(b.dataset.action==="toggle"){item.bought=!item.bought;save();render();return}
+ if(b.dataset.action==="edit"){openDialog(item);return}
+ if(b.dataset.action==="delete"){lastDeleted={...item};items=items.filter(i=>i.id!==id);save();render();toast("Item excluído.",true)}
 };
-
-$("list").onclick=e=>{
-  const b=e.target.closest("[data-action]"); if(!b)return;
-  const id=b.dataset.id; const item=items.find(i=>i.id===id); if(!item)return;
-  if(b.dataset.action==="toggle") item.bought=!item.bought;
-  if(b.dataset.action==="edit") {openDialog(item);return}
-  if(b.dataset.action==="delete"){lastDeleted={...item};items=items.filter(i=>i.id!==id);toast("Item excluído.",true)}
-  save();render();
+$("itemForm").onsubmit=e=>{e.preventDefault();const name=$("name").value.trim(),price=Number($("price").value),quantity=Number($("quantity").value),category=$("category").value;if(!name||price<0||quantity<=0)return;
+ if(editingId)items=items.map(i=>i.id===editingId?{...i,name,price,quantity,category}:i);else items.unshift({id:crypto.randomUUID?crypto.randomUUID():Date.now().toString(),name,price,quantity,category,bought:false});
+ save();render();closeDialog();toast(editingId?"Item atualizado.":"Item adicionado.");
 };
-
-$("itemForm").onsubmit=e=>{
-  e.preventDefault();
-  const name=$("name").value.trim(),price=Number($("price").value),quantity=Number($("quantity").value);
-  if(!name||price<0||quantity<=0)return;
-  if(editingId){
-    items=items.map(i=>i.id===editingId?{...i,name,price,quantity}:i);
-    toast("Item atualizado.");
-  }else{
-    items.unshift({id:crypto.randomUUID?crypto.randomUUID():Date.now().toString(),name,price,quantity,bought:false});
-    toast("Item adicionado.");
-  }
-  save();render();closeDialog();
+$("historyBtn").onclick=()=>{$("historyDialog").showModal();renderHistory()};$("closeHistory").onclick=()=>$("historyDialog").close();
+$("clearHistory").onclick=()=>{if(confirm("Apagar todo o histórico de compras?")){history=[];saveHistory();renderHistory();toast("Histórico apagado.")}};
+$("finishShopping").onclick=()=>{
+ if(!items.length){toast("Adicione pelo menos um item antes de finalizar.");return}
+ const now=new Date(),date=now.toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"});
+ history.unshift({id:Date.now(),date,total:total(),count:items.length,items:items.map(i=>({...i}))});
+ history=history.slice(0,30);saveHistory();items=[];save();render();toast("Compra salva no histórico.");
 };
-
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;$("installBtn").hidden=false});
 $("installBtn").onclick=async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$("installBtn").hidden=true};
 window.addEventListener("appinstalled",()=>{$("installBtn").hidden=true});
-if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js"));
+if("serviceWorker"in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js"));
 render();
