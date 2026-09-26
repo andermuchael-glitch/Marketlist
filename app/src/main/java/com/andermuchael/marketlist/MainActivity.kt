@@ -735,6 +735,7 @@ fun MarketlistApp(client: SupabaseClient? = null, vm: MarketViewModel = viewMode
     var budgetText by remember(vm.budget) { mutableStateOf(if (vm.budget == 0.0) "" else vm.budget.toString()) }
     var currentFilter by remember { mutableStateOf("Todos") }
     var selectedNav by remember { mutableIntStateOf(0) }
+    val priceDrafts = remember { mutableStateMapOf<Long, String>() }
     var cloudInitialized by remember(client) { mutableStateOf(false) }
 
     LaunchedEffect(client) {
