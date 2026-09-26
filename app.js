@@ -3,7 +3,11 @@ function readJSON(key,fallback){
   try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):fallback;}catch(e){return fallback;}
 }
 function readBudget(){
-  try{return Math.max(0,parseDecimal(localStorage.getItem(BUDGET_KEY)||"0"));}catch(e){return 0;}
+  try{
+    const raw=String(localStorage.getItem(BUDGET_KEY)||"").trim().replace(/R\$\s?/gi,"").replace(/\./g,"").replace(",",".");
+    const value=Number(raw);
+    return Number.isFinite(value)?Math.max(0,value):0;
+  }catch(e){return 0;}
 }
 let items=readJSON(KEY,[]);
 let history=readJSON(HISTORY_KEY,[]);
