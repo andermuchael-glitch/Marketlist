@@ -380,6 +380,8 @@ class MarketViewModel(app: Application) : AndroidViewModel(app) {
 
 }
 
+private fun formatBrazilianNumber(value: Double): String = String.format(Locale("pt", "BR"), "%.2f", value)
+
 private fun parseBrazilianDecimal(value: String): Double {
     var s = value.trim().replace("R$", "").replace(" ", "")
     if (s.isEmpty()) return 0.0
