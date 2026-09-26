@@ -1,5 +1,6 @@
 package com.andermuchael.marketlist
 
+import android.app.Application
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,9 +21,10 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -31,26 +33,39 @@ data class ShoppingItem(val id: Long, val name: String, val price: Double, val q
     val total get() = price * quantity
 }
 
-class MarketViewModel : ViewModel() {
-    var items by mutableStateOf<List<ShoppingItem>>(emptyList()); private set
+class MarketViewModel(app: Application) : AndroidViewModel(app) {
+    private val prefs = app.getSharedPreferences("marketlist", 0)
+    private val json = Json { ignoreUnknownKeys = true }
+
+    var items by mutableStateOf(loadItems()); private set
     var showAdd by mutableStateOf(false)
     var name by mutableStateOf("")
     var priceText by mutableStateOf("")
     var quantityText by mutableStateOf("1")
+
     val total get() = items.sumOf { it.total }
     val pending get() = items.count { !it.bought }
     val bought get() = items.count { it.bought }
+
+    private fun loadItems(): List<ShoppingItem> = runCatching {
+        json.decodeFromString(prefs.getString("items", "[]") ?: "[]")
+    }.getOrDefault(emptyList())
+
+    private fun saveItems() {
+        prefs.edit().putString("items", json.encodeToString(items)).apply()
+    }
 
     fun addItem() {
         val n=name.trim(); val p=priceText.replace(",",".").toDoubleOrNull() ?: 0.0
         val q=quantityText.toIntOrNull()?.coerceAtLeast(1) ?: 1
         if(n.isEmpty()) return
         items=items+ShoppingItem(System.currentTimeMillis(),n,p,q)
+        saveItems()
         name=""; priceText=""; quantityText="1"; showAdd=false
     }
-    fun toggle(id:Long){items=items.map{if(it.id==id)it.copy(bought=!it.bought)else it}}
-    fun delete(id:Long){items=items.filterNot{it.id==id}}
-    fun clearBought(){items=items.filterNot{it.bought}}
+    fun toggle(id:Long){items=items.map{if(it.id==id)it.copy(bought=!it.bought)else it};saveItems()}
+    fun delete(id:Long){items=items.filterNot{it.id==id};saveItems()}
+    fun clearBought(){items=items.filterNot{it.bought};saveItems()}
 }
 
 fun money(v:Double)=NumberFormat.getCurrencyInstance(Locale("pt","BR")).format(v)
@@ -63,8 +78,8 @@ class MainActivity:ComponentActivity(){
 @Composable
 fun MarketlistApp(vm:MarketViewModel=viewModel()){
     MaterialTheme(colorScheme=lightColorScheme(
-        primary=Color(0xFF2563EB), secondary=Color(0xFF10B981),
-        background=Color(0xFFF6F8FC), surface=Color.White
+        primary=Color(0xFF2563EB),secondary=Color(0xFF10B981),
+        background=Color(0xFFF6F8FC),surface=Color.White
     )){
         Scaffold(
             topBar={TopAppBar(title={Column{
