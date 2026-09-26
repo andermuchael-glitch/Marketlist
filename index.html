@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#2563eb">
+  <meta name="description" content="Marketlist — lista de compras simples, rápida e persistente.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <title>Marketlist</title>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">LISTA DE COMPRAS</p>
+        <h1>Marketlist</h1>
+      </div>
+      <button id="installBtn" class="icon-btn" hidden aria-label="Instalar aplicativo">⇩</button>
+    </header>
+
+    <section class="summary">
+      <div><span>Total</span><strong id="grandTotal">R$ 0,00</strong></div>
+      <div><span>Pendentes</span><strong id="pendingCount">0</strong></div>
+      <div><span>Comprados</span><strong id="boughtCount">0</strong></div>
+    </section>
+
+    <section class="toolbar">
+      <input id="search" type="search" placeholder="Buscar item..." autocomplete="off">
+      <button id="clearBought" class="secondary">Limpar comprados</button>
+    </section>
+
+    <section id="emptyState" class="empty">
+      <div class="empty-icon">🛒</div>
+      <h2>Sua lista está vazia</h2>
+      <p>Adicione produtos, informe preço e quantidade e acompanhe o total.</p>
+    </section>
+
+    <section id="list" class="list" aria-live="polite"></section>
+  </main>
+
+  <button id="addBtn" class="fab" aria-label="Adicionar item">+</button>
+
+  <dialog id="itemDialog">
+    <form id="itemForm" method="dialog" class="dialog-card">
+      <div class="dialog-head">
+        <h2>Adicionar item</h2>
+        <button type="button" id="closeDialog" class="close">×</button>
+      </div>
+      <label>Produto
+        <input id="name" required maxlength="80" placeholder="Ex.: Arroz">
+      </label>
+      <div class="two-cols">
+        <label>Preço unitário
+          <input id="price" required inputmode="decimal" type="number" min="0" step="0.01" placeholder="0,00">
+        </label>
+        <label>Quantidade
+          <input id="quantity" required inputmode="decimal" type="number" min="0.01" step="0.01" value="1">
+        </label>
+      </div>
+      <div class="preview">Total do item: <strong id="itemPreview">R$ 0,00</strong></div>
+      <button class="primary" type="submit">Adicionar à lista</button>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
