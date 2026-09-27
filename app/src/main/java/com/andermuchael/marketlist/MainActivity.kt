@@ -948,21 +948,35 @@ fun MarketlistApp(client: SupabaseClient? = null, vm: MarketViewModel = viewMode
                                 RoundedCornerShape(18.dp)
                             ) {
                                 Column(Modifier.padding(12.dp)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        IconButton(onClick = { vm.toggle(item.id) }) {
-                                            Icon(
-                                                if (item.bought) Icons.Default.CheckCircle else Icons.Default.ShoppingCart,
-                                                null,
-                                                tint = if (item.bought) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
-                                            )
-                                        }
+                                    Row(
+                                        Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        FilterChip(
+                                            selected = item.bought,
+                                            onClick = { vm.toggle(item.id) },
+                                            label = {
+                                                Text(if (item.bought) "Comprado" else "Marcar comprado")
+                                            },
+                                            leadingIcon = {
+                                                Icon(
+                                                    if (item.bought) Icons.Default.CheckCircle else Icons.Default.ShoppingCart,
+                                                    null
+                                                )
+                                            }
+                                        )
+                                        Spacer(Modifier.width(8.dp))
                                         Column(Modifier.weight(1f)) {
                                             Text(
                                                 item.name,
                                                 style = MaterialTheme.typography.titleMedium,
                                                 textDecoration = if (item.bought) TextDecoration.LineThrough else TextDecoration.None
                                             )
-                                            Text(item.category, style = MaterialTheme.typography.labelSmall)
+                                            Text(
+                                                if (item.bought) item.category + " • comprado — toque para desfazer"
+                                                else item.category,
+                                                style = MaterialTheme.typography.labelSmall
+                                            )
                                         }
                                         Text(money(item.total), style = MaterialTheme.typography.titleMedium)
                                         IconButton(onClick = { vm.delete(item.id) }) {
@@ -983,12 +997,29 @@ fun MarketlistApp(client: SupabaseClient? = null, vm: MarketViewModel = viewMode
                                             Icon(Icons.Default.Add, "Aumentar quantidade")
                                         }
                                         Spacer(Modifier.width(6.dp))
+                                        val draft = priceDrafts[item.id]
+                                        val shownPrice = draft ?: if (item.price == 0.0) "" else formatBrazilianNumber(item.price)
                                         OutlinedTextField(
-                                            value = if (item.price == 0.0) "" else item.price.toString(),
-                                            onValueChange = { vm.updatePrice(item.id, it) },
+                                            value = shownPrice,
+                                            onValueChange = { priceDrafts[item.id] = it },
                                             modifier = Modifier.weight(1f),
                                             label = { Text("Preço no mercado") },
                                             prefix = { Text("R$ ") },
+                                            trailingIcon = {
+                                                if (priceDrafts.containsKey(item.id)) {
+                                                    IconButton(
+                                                        onClick = {
+                                                            vm.updatePrice(item.id, priceDrafts[item.id].orEmpty())
+                                                            priceDrafts.remove(item.id)
+                                                        }
+                                                    ) {
+                                                        Icon(
+                                                            Icons.Default.CheckCircle,
+                                                            contentDescription = "Confirmar preço"
+                                                        )
+                                                    }
+                                                }
+                                            },
                                             singleLine = true,
                                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                             shape = RoundedCornerShape(12.dp)
