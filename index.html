@@ -78,7 +78,15 @@
     <section id="categoryFilters" class="filters category-filters" aria-label="Categorias"></section>
     <section id="list" class="list" aria-live="polite"></section>
     <section class="finish-row"><button id="finishShopping" class="primary">✓ Arquivar comprados</button></section>
-    <button id="fabAdd" class="fab" type="button" aria-label="Adicionar novo produto" title="Novo produto">+</button><nav class="bottom-nav" aria-label="Navegação principal"><button class="nav-item active" type="button" data-nav="list"><span>☷</span><b>Lista</b></button><button class="nav-item" type="button" data-nav="history"><span>◷</span><b>Histórico</b></button><button class="nav-item" type="button" data-nav="backup"><span>▥</span><b>Código</b></button><button class="nav-item" type="button" data-nav="budget"><span>•••</span><b>Mais</b></button></nav>
+    <button id="fabAdd" class="fab" type="button" aria-label="Adicionar novo produto" title="Novo produto">+</button><nav class="bottom-nav" aria-label="Navegação principal"><button class="nav-item active" type="button" data-nav="list"><span>☷</span><b>Lista</b></button><button class="nav-item" type="button" data-nav="history"><span>◷</span><b>Histórico</b></button><button class="nav-item" type="button" data-nav="backup"><span>▥</span><b>Código</b></button><button class="nav-item" type="button" data-nav="more"><span>•••</span><b>Mais</b></button></nav>
+  <dialog id="moreDialog">
+    <div class="dialog-card more-card">
+      <div class="dialog-head"><div><h2>Mais</h2><p>Configurações e ações da sua conta</p></div><button type="button" id="closeMore" class="close">×</button></div>
+      <button type="button" id="moreBudget" class="primary">Definir / editar orçamento</button>
+      <button type="button" id="moreBackup" class="secondary">Backup e restauração</button>
+      <button type="button" id="logoutButton" class="secondary">Sair da conta</button>
+    </div>
+  </dialog>
   <dialog id="historyDialog"><div class="history-card">
       <div class="dialog-head"><h2>Histórico de compras</h2><button type="button" id="closeHistory" class="close">×</button></div>
       <div id="historyList" class="history-list"></div>
@@ -136,6 +144,6 @@
   </dialog>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
-  <script src="app.js?v=20260926-10"></script>
+  <script src="app.js?v=20260926-11"></script>
 </body>
 </html>
