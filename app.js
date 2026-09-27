@@ -145,7 +145,7 @@ document.querySelectorAll("[data-nav]").forEach(btn=>btn.onclick=()=>{
  if(target==="list")window.scrollTo({top:0,behavior:"smooth"});
  if(target==="history")$("historyBtn")?.click();
  if(target==="backup")$("backupBtn")?.click();
- if(target==="budget")budgetBtn?.click();
+ if(target==="more")$("moreDialog")?.showModal();
  document.querySelectorAll("[data-nav]").forEach(n=>n.classList.toggle("active",n===btn));
 });
 
